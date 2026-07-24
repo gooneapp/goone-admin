@@ -48,6 +48,7 @@ export interface DataTableProps<T> {
   }[];
   defaultPageSize?: number;
   onRowClick?: (row: T) => void;
+  isLoading?: boolean;
 }
 
 export function DataTable<T extends Record<string, any>>({
@@ -62,6 +63,7 @@ export function DataTable<T extends Record<string, any>>({
   bulkActions,
   defaultPageSize = 10,
   onRowClick,
+  isLoading = false,
 }: DataTableProps<T>) {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortKey, setSortKey] = useState<string | null>(null);
@@ -349,7 +351,19 @@ export function DataTable<T extends Record<string, any>>({
             </tr>
           </thead>
           <tbody>
-            {paginatedData.length === 0 ? (
+            {isLoading ? (
+              Array.from({ length: 5 }).map((_, idx) => (
+                <tr key={idx} style={{ borderBottom: '1px solid #1e293b' }}>
+                  {bulkActions && <td style={{ padding: '0.75rem 1rem' }}><div style={{ width: '16px', height: '16px', borderRadius: '4px', background: '#1e293b', animation: 'pulse 1.5s infinite' }} /></td>}
+                  {columns.filter(c => visibleColumns.has(c.key)).map((col, i) => (
+                    <td key={col.key} style={{ padding: '0.75rem 1rem' }}>
+                      <div style={{ width: i === 0 ? '60%' : '80%', height: '16px', borderRadius: '4px', background: '#334155', animation: 'pulse 1.5s infinite opacity' }} />
+                    </td>
+                  ))}
+                  {rowActions && <td style={{ padding: '0.75rem 1rem' }}><div style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#334155', marginLeft: 'auto' }} /></td>}
+                </tr>
+              ))
+            ) : paginatedData.length === 0 ? (
               <tr>
                 <td 
                   colSpan={columns.filter(c => visibleColumns.has(c.key)).length + (bulkActions ? 1 : 0) + (rowActions ? 1 : 0)}

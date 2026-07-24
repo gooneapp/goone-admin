@@ -9,16 +9,26 @@ export const Login: React.FC = () => {
   const [password, setPassword] = useState('password123');
   const [selectedRole, setSelectedRole] = useState<AdminRole>('super_admin');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setAuth('demo-jwt-token-production-ready', {
-      id: `usr-adm-${Date.now()}`,
-      email,
-      name: `GoOne ${selectedRole.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}`,
-      role: selectedRole,
-      active: true,
-      createdAt: new Date().toISOString(),
-    });
+    setIsLoading(true);
+    try {
+      // Import api client dynamically or rely on global apiClient
+      const { apiClient } = await import('../api/client');
+      const res = await apiClient.post('/admin/auth/login', { email, password });
+      
+      const { token, admin } = res.data.data;
+      setAuth(token, admin);
+      
+      const { toast } = await import('../store/toastStore');
+      toast.success('Successfully logged in');
+    } catch (err) {
+      // Error is handled globally by interceptor with a toast
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const roles: { role: AdminRole; label: string }[] = [
@@ -89,24 +99,25 @@ export const Login: React.FC = () => {
 
           <button
             type="submit"
+            disabled={isLoading}
             style={{
               marginTop: '0.5rem',
               padding: '0.75rem',
-              background: 'linear-gradient(135deg, #0284c7, #38bdf8)',
+              background: isLoading ? '#475569' : 'linear-gradient(135deg, #0284c7, #38bdf8)',
               border: 'none',
               borderRadius: '8px',
               color: '#ffffff',
               fontWeight: 700,
               fontSize: '0.95rem',
-              cursor: 'pointer',
-              boxShadow: '0 4px 15px rgba(56, 189, 248, 0.4)',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
+              boxShadow: isLoading ? 'none' : '0 4px 15px rgba(56, 189, 248, 0.4)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '0.5rem',
             }}
           >
-            <ShieldCheck size={18} /> Sign In to Portal
+            <ShieldCheck size={18} /> {isLoading ? 'Authenticating...' : 'Sign In to Portal'}
           </button>
         </form>
       </div>

@@ -13,9 +13,9 @@ export const AuditLogs: React.FC = () => {
   }, []);
 
   const columns: Column<AuditLog>[] = [
-    { key: 'actionType', header: 'Administrative Action', sortable: true, render: (val) => <span style={{ fontWeight: 600, color: '#38bdf8' }}>{val}</span> },
+    { key: 'actionType', header: 'Administrative Action', sortable: true, filterable: true, filterOptions: ['APPROVE_KYC', 'SUSPEND_BUSINESS', 'UPDATE_PLAN', 'OTHER'], render: (val) => <span style={{ fontWeight: 600, color: '#38bdf8' }}>{val}</span> },
     { key: 'actorName', header: 'Executing Admin User', sortable: true },
-    { key: 'actorRole', header: 'Security Scope', render: (val) => <Badge variant="purple">{val ? val.toUpperCase() : 'UNKNOWN'}</Badge> },
+    { key: 'actorRole', header: 'Security Scope', filterable: true, filterOptions: ['super_admin', 'admin', 'manager', 'support', 'finance'], render: (val) => <Badge variant="purple">{val ? val.toUpperCase() : 'UNKNOWN'}</Badge> },
     { key: 'entityReference', header: 'Target Resource', render: (_, row) => `${row.entityName || ''} (${row.entityReference})` },
     { key: 'reason', header: 'Mandatory Reason Logged', render: (val) => <span style={{ fontStyle: 'italic', color: '#fbbf24' }}>"{val || 'Standard System Operation'}"</span> },
     { key: 'ipAddress', header: 'IP Address', render: (val) => val || '127.0.0.1' },

@@ -23,20 +23,20 @@ const DEFAULT_ADMIN: AdminUser = {
 function getInitialUser(): AdminUser | null {
   try {
     const raw = localStorage.getItem('goone_admin_user');
-    if (!raw || raw === 'undefined' || raw === 'null') return DEFAULT_ADMIN;
+    if (!raw || raw === 'undefined' || raw === 'null') return null;
     const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === 'object' && parsed.role ? parsed : DEFAULT_ADMIN;
+    return parsed && typeof parsed === 'object' && parsed.role ? parsed : null;
   } catch {
-    return DEFAULT_ADMIN;
+    return null;
   }
 }
 
 function getInitialToken(): string | null {
   try {
     const token = localStorage.getItem('goone_admin_token');
-    return token && token !== 'undefined' ? token : 'demo-jwt-token-production-ready';
+    return token && token !== 'undefined' ? token : null;
   } catch {
-    return 'demo-jwt-token-production-ready';
+    return null;
   }
 }
 

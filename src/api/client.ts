@@ -1,5 +1,5 @@
 import axios from 'axios';
-import * as MOCK from './mockData';
+import { toast } from '../store/toastStore';
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api/v1';
 
@@ -23,195 +23,109 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Unified API Service Provider with Mock Fallback for production resilience
+// Response interceptor: Global error handling and toast notifications
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const message = error.response?.data?.message || error.message || 'An unexpected error occurred';
+    toast.error(message);
+    
+    // Handle unauthorized
+    if (error.response?.status === 401) {
+      localStorage.removeItem('goone_admin_token');
+      localStorage.removeItem('auth-storage');
+      window.location.href = '/';
+    }
+    
+    return Promise.reject(error);
+  }
+);
+
+// Unified API Service Provider without Mock Fallback
 export const api = {
   getAnalytics: async () => {
-    try {
-      const res = await apiClient.get('/admin/analytics');
-      return res.data;
-    } catch {
-      return MOCK.MOCK_ANALYTICS_SUMMARY;
-    }
+    const res = await apiClient.get('/admin/analytics');
+    return res.data;
   },
-
   getBusinesses: async () => {
-    try {
-      const res = await apiClient.get('/admin/businesses');
-      return res.data;
-    } catch {
-      return MOCK.MOCK_BUSINESSES;
-    }
+    const res = await apiClient.get('/admin/businesses');
+    return res.data;
   },
-
   getUsers: async () => {
-    try {
-      const res = await apiClient.get('/admin/users');
-      return res.data;
-    } catch {
-      return MOCK.MOCK_SYSTEM_USERS;
-    }
+    const res = await apiClient.get('/admin/users');
+    return res.data;
   },
-
   getKycDocuments: async () => {
-    try {
-      const res = await apiClient.get('/admin/kyc-documents');
-      return res.data;
-    } catch {
-      return MOCK.MOCK_KYC_DOCUMENTS;
-    }
+    const res = await apiClient.get('/admin/kyc-documents');
+    return res.data;
   },
-
   getCategories: async () => {
-    try {
-      const res = await apiClient.get('/categories');
-      return res.data;
-    } catch {
-      return MOCK.MOCK_CATEGORIES;
-    }
+    const res = await apiClient.get('/categories');
+    return res.data;
   },
-
   getProducts: async () => {
-    try {
-      const res = await apiClient.get('/admin/products');
-      return res.data;
-    } catch {
-      return MOCK.MOCK_PRODUCTS;
-    }
+    const res = await apiClient.get('/admin/products');
+    return res.data;
   },
-
   getOrders: async () => {
-    try {
-      const res = await apiClient.get('/admin/orders');
-      return res.data;
-    } catch {
-      return MOCK.MOCK_ORDERS;
-    }
+    const res = await apiClient.get('/admin/orders');
+    return res.data;
   },
-
   getPartners: async () => {
-    try {
-      const res = await apiClient.get('/admin/partners');
-      return res.data;
-    } catch {
-      return MOCK.MOCK_PARTNER_VEHICLES;
-    }
+    const res = await apiClient.get('/admin/partners');
+    return res.data;
   },
-
   getDeliveryJobs: async () => {
-    try {
-      const res = await apiClient.get('/admin/deliveries');
-      return res.data;
-    } catch {
-      return MOCK.MOCK_DELIVERY_JOBS;
-    }
+    const res = await apiClient.get('/admin/deliveries');
+    return res.data;
   },
-
   getSubscriptions: async () => {
-    try {
-      const res = await apiClient.get('/admin/subscriptions');
-      return res.data;
-    } catch {
-      return MOCK.MOCK_SUBSCRIPTIONS;
-    }
+    const res = await apiClient.get('/admin/subscriptions');
+    return res.data;
   },
-
   getSubscriptionPlans: async () => {
-    try {
-      const res = await apiClient.get('/plans');
-      return res.data;
-    } catch {
-      return MOCK.MOCK_SUBSCRIPTION_PLANS;
-    }
+    const res = await apiClient.get('/plans');
+    return res.data;
   },
-
   getCreditAccounts: async () => {
-    try {
-      const res = await apiClient.get('/admin/credit-accounts');
-      return res.data;
-    } catch {
-      return MOCK.MOCK_CREDIT_ACCOUNTS;
-    }
+    const res = await apiClient.get('/admin/credit-accounts');
+    return res.data;
   },
-
   getSupportTickets: async () => {
-    try {
-      const res = await apiClient.get('/admin/support-tickets');
-      return res.data;
-    } catch {
-      return MOCK.MOCK_SUPPORT_TICKETS;
-    }
+    const res = await apiClient.get('/admin/support-tickets');
+    return res.data;
   },
-
   getCmsContent: async () => {
-    try {
-      const res = await apiClient.get('/admin/cms-content');
-      return res.data;
-    } catch {
-      return MOCK.MOCK_CMS_CONTENT;
-    }
+    const res = await apiClient.get('/admin/cms-content');
+    return res.data;
   },
-
   getAdvertisements: async () => {
-    try {
-      const res = await apiClient.get('/admin/advertisements');
-      return res.data;
-    } catch {
-      return MOCK.MOCK_ADVERTISEMENTS;
-    }
+    const res = await apiClient.get('/admin/advertisements');
+    return res.data;
   },
-
   getFeatureToggles: async () => {
-    try {
-      const res = await apiClient.get('/admin/feature-toggles');
-      return res.data;
-    } catch {
-      return MOCK.MOCK_FEATURE_TOGGLES;
-    }
+    const res = await apiClient.get('/admin/feature-toggles');
+    return res.data;
   },
-
   getWebsiteConfigs: async () => {
-    try {
-      const res = await apiClient.get('/admin/config');
-      return res.data;
-    } catch {
-      return MOCK.MOCK_WEBSITE_CONFIGS;
-    }
+    const res = await apiClient.get('/admin/config');
+    return res.data;
   },
-
   getAuditLogs: async () => {
-    try {
-      const res = await apiClient.get('/admin/audit-logs');
-      return res.data;
-    } catch {
-      return MOCK.MOCK_AUDIT_LOGS;
-    }
+    const res = await apiClient.get('/admin/audit-logs');
+    return res.data;
   },
-
   getApiKeys: async () => {
-    try {
-      const res = await apiClient.get('/admin/api-keys');
-      return res.data;
-    } catch {
-      return MOCK.MOCK_API_KEYS;
-    }
+    const res = await apiClient.get('/admin/api-keys');
+    return res.data;
   },
-
   getSystemHealth: async () => {
-    try {
-      const res = await apiClient.get('/admin/health');
-      return res.data;
-    } catch {
-      return MOCK.MOCK_SYSTEM_HEALTH;
-    }
+    const res = await apiClient.get('/admin/health');
+    return res.data;
   },
-
   getAdminUsers: async () => {
-    try {
-      const res = await apiClient.get('/admin/admin-users');
-      return res.data;
-    } catch {
-      return MOCK.MOCK_ADMIN_USERS;
-    }
+    const res = await apiClient.get('/admin/admin-users');
+    return res.data;
   },
 };
 

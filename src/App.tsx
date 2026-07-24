@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuthStore } from './store/authStore';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
+import { ToastContainer } from './components/Toast';
 
 // Import All 22 Domain Pages
 import { Login } from './pages/Login';
@@ -21,7 +22,7 @@ import { Analytics } from './pages/Analytics';
 import { SupportTickets } from './pages/SupportTickets';
 import { NotificationCenter } from './pages/NotificationCenter';
 import { AdvertisementManager } from './pages/AdvertisementManager';
-import { CmsManager } from './pages/CmsManager';
+import { ContentManager } from './pages/ContentManager';
 import { SettingsPage } from './pages/Settings';
 import { AuditLogs } from './pages/AuditLogs';
 import { ApiManagement } from './pages/ApiManagement';
@@ -55,7 +56,7 @@ export function App() {
       case '/support-tickets': return <SupportTickets />;
       case '/notifications': return <NotificationCenter />;
       case '/advertisements': return <AdvertisementManager />;
-      case '/cms': return <CmsManager />;
+      case '/cms': return <ContentManager />;
       case '/settings': return <SettingsPage />;
       case '/audit-logs': return <AuditLogs />;
       case '/api-management': return <ApiManagement />;
@@ -68,6 +69,7 @@ export function App() {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#090d16', color: '#f8fafc', fontFamily: 'Inter, system-ui, sans-serif' }}>
+      <ToastContainer />
       <Sidebar currentPath={currentPath} onNavigate={(path) => setCurrentPath(path)} />
 
       <div style={{ marginLeft: '260px', flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>

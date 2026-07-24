@@ -1,144 +1,120 @@
-import React, { useState } from 'react';
-import { Languages, Megaphone, Plus, Save } from '../components/icons';
-
-interface ContentItem {
-  id: string;
-  key: string;
-  ta: string;
-  en: string;
-  hi: string;
-}
+import React, { useEffect, useState } from 'react';
+import { api } from '../api/client';
+import { CmsContentItem } from '../types';
+import { DataTable, Column, RowAction } from '../components/DataTable';
+import { Badge } from '../components/Badge';
+import { Plus, Edit, Trash } from 'lucide-react';
+import { Modal } from '../components/Modal';
+import { toast } from '../store/toastStore';
 
 export const ContentManager: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'i18n' | 'announcements'>('i18n');
+  const [content, setContent] = useState<CmsContentItem[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingContent, setEditingContent] = useState<CmsContentItem | null>(null);
 
-  const [i18nStrings, setI18nStrings] = useState<ContentItem[]>([
-    { id: '1', key: 'btn_place_order', en: 'Place Order', ta: 'ஆர்டர் செய்', hi: 'ऑर्डर दें' },
-    { id: '2', key: 'label_total_amount', en: 'Total Amount', ta: 'மொத்த தொகை', hi: 'कुल राशि' },
-    { id: '3', key: 'msg_credit_added', en: 'Credit Added to Book', ta: 'கடன் சேர்க்கப்பட்டது', hi: 'उधार जोड़ा गया' },
-    { id: '4', key: 'btn_book_ride', en: 'Book Ride', ta: 'பயணம் பதிவு செய்', hi: 'राइड बुक करें' },
-  ]);
+  useEffect(() => {
+    api.getCmsContent().then(setContent);
+  }, []);
 
-  const [announcements] = useState([
-    { id: 'a-1', title: 'Monsoon Delivery Advisory', body: 'Expect slight delays during heavy rain in Erode region.', active: true },
-    { id: 'a-2', title: 'New Bluetooth Printing Support', body: 'All shops can now pair 58mm/80mm thermal receipt printers.', active: true },
-  ]);
-
-  const handleUpdateI18n = (id: string, field: 'en' | 'ta' | 'hi', val: string) => {
-    setI18nStrings((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, [field]: val } : item)),
-    );
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingContent?.id) {
+      setContent(content.map(c => c.id === editingContent.id ? { ...editingContent, updatedAt: new Date().toISOString() } : c));
+      toast.success('Content updated successfully');
+    } else if (editingContent) {
+      const newContent = { 
+        ...editingContent, 
+        id: `cms-${Date.now()}`, 
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        updatedByAdminName: 'Current User' // mock
+      };
+      setContent([...content, newContent]);
+      toast.success('Content created successfully');
+    }
+    setIsModalOpen(false);
   };
+
+  const handleDelete = (id: string) => {
+    if (window.confirm('Are you sure you want to delete this content item?')) {
+      setContent(content.filter(c => c.id !== id));
+      toast.success('Content deleted');
+    }
+  };
+
+  const columns: Column<CmsContentItem>[] = [
+    { key: 'key', header: 'Content Key', sortable: true, render: (val) => <span style={{ fontWeight: 600, color: '#38bdf8' }}>{val}</span> },
+    { key: 'contentType', header: 'Type', render: (val) => <Badge variant="info">{val.replace('_', ' ')}</Badge> },
+    { key: 'bodyEn', header: 'English (EN)', render: (val) => val || '-' },
+    { key: 'bodyTa', header: 'Tamil (TA)', render: (val) => <span style={{ color: '#38bdf8' }}>{val || '-'}</span> },
+    { key: 'bodyHi', header: 'Hindi (HI)', render: (val) => <span style={{ color: '#fbbf24' }}>{val || '-'}</span> },
+    { key: 'published', header: 'Status', render: (val) => <Badge variant={val ? 'success' : 'neutral'}>{val ? 'Published' : 'Draft'}</Badge> },
+  ];
+
+  const rowActions: RowAction<CmsContentItem>[] = [
+    { label: 'Edit Content', icon: <Edit size={15} />, onClick: (row) => { setEditingContent(row); setIsModalOpen(true); } },
+    { label: 'Delete Content', icon: <Trash size={15} />, variant: 'danger', onClick: (row) => handleDelete(row.id) }
+  ];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'white' }}>
-            Content & Multilingual Management
-          </h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-            Edit app language translations (Tamil/English/Hindi) & push platform-wide announcements
-          </p>
-        </div>
-
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button
-            className={`btn ${activeTab === 'i18n' ? 'btn-primary' : 'btn-secondary'}`}
-            onClick={() => setActiveTab('i18n')}
-          >
-            <Languages size={16} /> Language Strings (i18n)
-          </button>
-          <button
-            className={`btn ${activeTab === 'announcements' ? 'btn-primary' : 'btn-secondary'}`}
-            onClick={() => setActiveTab('announcements')}
-          >
-            <Megaphone size={16} /> Broadcast Announcements
-          </button>
-        </div>
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <button
+          onClick={() => { 
+            setEditingContent({ id: '', contentType: 'language_string', key: '', bodyEn: '', bodyTa: '', bodyHi: '', published: true, updatedByAdminName: '', updatedAt: '' }); 
+            setIsModalOpen(true); 
+          }}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#38bdf8', color: '#0f172a', border: 'none', padding: '0.6rem 1rem', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}
+        >
+          <Plus size={18} /> New Content
+        </button>
       </div>
 
-      {activeTab === 'i18n' ? (
-        <div className="glass-panel" style={{ padding: '1.25rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'white' }}>
-              App UI Language Dictionary (Hot-reloaded in Mobile Apps)
-            </h3>
-            <button className="btn btn-success btn-sm" onClick={() => alert('Translations published to API cache!')}>
-              <Save size={14} /> Publish Changes
-            </button>
-          </div>
+      <DataTable
+        title="CMS & Multi-Language String Translations"
+        subtitle="Manage dynamic help articles, in-app announcements, and externalized i18n language string resources (FR-12.8)."
+        columns={columns}
+        data={content}
+        keyExtractor={(item) => item.id}
+        searchPlaceholder="Search key, translation text..."
+        rowActions={rowActions}
+      />
 
-          <div className="data-table-container">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>String Key</th>
-                  <th>English Label</th>
-                  <th>Tamil Label (தமிழ்)</th>
-                  <th>Hindi Label (हिंदी)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {i18nStrings.map((item) => (
-                  <tr key={item.id}>
-                    <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8125rem', color: '#60a5fa' }}>
-                      {item.key}
-                    </td>
-                    <td>
-                      <input
-                        type="text"
-                        className="input-field"
-                        value={item.en}
-                        onChange={(e) => handleUpdateI18n(item.id, 'en', e.target.value)}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="text"
-                        className="input-field"
-                        value={item.ta}
-                        onChange={(e) => handleUpdateI18n(item.id, 'ta', e.target.value)}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="text"
-                        className="input-field"
-                        value={item.hi}
-                        onChange={(e) => handleUpdateI18n(item.id, 'hi', e.target.value)}
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingContent?.id ? 'Edit Content' : 'Create Content'}>
+        <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.875rem' }}>Content Type</label>
+            <select value={editingContent?.contentType || 'language_string'} onChange={(e) => setEditingContent(prev => prev ? { ...prev, contentType: e.target.value as any } : null)} style={{ width: '100%', padding: '0.6rem', background: '#1e293b', border: '1px solid #334155', borderRadius: '6px', color: '#f8fafc' }}>
+              <option value="language_string">Language String</option>
+              <option value="announcement">Announcement</option>
+              <option value="help_article">Help Article</option>
+            </select>
           </div>
-        </div>
-      ) : (
-        <div className="glass-panel" style={{ padding: '1.25rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'white' }}>
-              Active Mobile Banners & Announcements
-            </h3>
-            <button className="btn btn-primary btn-sm">
-              <Plus size={14} /> New Announcement
-            </button>
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.875rem' }}>Key (Unique ID)</label>
+            <input required value={editingContent?.key || ''} onChange={(e) => setEditingContent(prev => prev ? { ...prev, key: e.target.value } : null)} style={{ width: '100%', padding: '0.6rem', background: '#1e293b', border: '1px solid #334155', borderRadius: '6px', color: '#f8fafc' }} />
           </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {announcements.map((anc) => (
-              <div key={anc.id} className="glass-card" style={{ padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div style={{ fontWeight: 600, color: 'white', fontSize: '1rem' }}>{anc.title}</div>
-                  <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>{anc.body}</div>
-                </div>
-                <span className="badge badge-active">Live Banner</span>
-              </div>
-            ))}
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.875rem' }}>English Translation (EN)</label>
+            <textarea value={editingContent?.bodyEn || ''} onChange={(e) => setEditingContent(prev => prev ? { ...prev, bodyEn: e.target.value } : null)} rows={3} style={{ width: '100%', padding: '0.6rem', background: '#1e293b', border: '1px solid #334155', borderRadius: '6px', color: '#f8fafc', resize: 'vertical' }} />
           </div>
-        </div>
-      )}
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.875rem' }}>Tamil Translation (TA)</label>
+            <textarea value={editingContent?.bodyTa || ''} onChange={(e) => setEditingContent(prev => prev ? { ...prev, bodyTa: e.target.value } : null)} rows={3} style={{ width: '100%', padding: '0.6rem', background: '#1e293b', border: '1px solid #334155', borderRadius: '6px', color: '#f8fafc', resize: 'vertical' }} />
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.875rem' }}>Hindi Translation (HI)</label>
+            <textarea value={editingContent?.bodyHi || ''} onChange={(e) => setEditingContent(prev => prev ? { ...prev, bodyHi: e.target.value } : null)} rows={3} style={{ width: '100%', padding: '0.6rem', background: '#1e293b', border: '1px solid #334155', borderRadius: '6px', color: '#f8fafc', resize: 'vertical' }} />
+          </div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+            <input type="checkbox" checked={editingContent?.published || false} onChange={(e) => setEditingContent(prev => prev ? { ...prev, published: e.target.checked } : null)} />
+            Published
+          </label>
+          <button type="submit" style={{ marginTop: '1rem', background: '#38bdf8', color: '#0f172a', border: 'none', padding: '0.75rem', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}>
+            Save Content
+          </button>
+        </form>
+      </Modal>
     </div>
   );
 };
