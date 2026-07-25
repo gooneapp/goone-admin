@@ -5,6 +5,7 @@ import { DataTable, Column, RowAction } from '../components/DataTable';
 import { Badge } from '../components/Badge';
 import { Plus, Edit, Trash } from 'lucide-react';
 import { Modal } from '../components/Modal';
+import { FileUpload } from '../components/FileUpload';
 import { toast } from '../store/toastStore';
 
 export const ContentManager: React.FC = () => {
@@ -106,6 +107,16 @@ export const ContentManager: React.FC = () => {
             <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.875rem' }}>Hindi Translation (HI)</label>
             <textarea value={editingContent?.bodyHi || ''} onChange={(e) => setEditingContent(prev => prev ? { ...prev, bodyHi: e.target.value } : null)} rows={3} style={{ width: '100%', padding: '0.6rem', background: '#1e293b', border: '1px solid #334155', borderRadius: '6px', color: '#f8fafc', resize: 'vertical' }} />
           </div>
+          {editingContent?.contentType === 'announcement' && (
+            <FileUpload
+              label="Announcement Banner Image"
+              accept="image/*"
+              uploadType="image"
+              currentUrl={editingContent?.mediaUrl}
+              onUploadSuccess={(url) => setEditingContent(prev => prev ? { ...prev, mediaUrl: url } : null)}
+            />
+          )}
+
           <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
             <input type="checkbox" checked={editingContent?.published || false} onChange={(e) => setEditingContent(prev => prev ? { ...prev, published: e.target.checked } : null)} />
             Published

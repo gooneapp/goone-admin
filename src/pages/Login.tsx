@@ -41,8 +41,15 @@ export const Login: React.FC = () => {
     <div style={{ minHeight: '100vh', background: 'radial-gradient(circle at top right, #1e293b, #090d16)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', color: '#f8fafc' }}>
       <div style={{ background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(16px)', border: '1px solid #334155', borderRadius: '16px', padding: '2.5rem', width: '100%', maxWidth: '440px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)' }}>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <div style={{ width: '56px', height: '56px', borderRadius: '14px', background: 'linear-gradient(135deg, #0284c7, #38bdf8)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, color: '#fff', fontSize: '1.75rem', boxShadow: '0 0 20px rgba(56, 189, 248, 0.5)', marginBottom: '1rem' }}>
-            GO
+          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
+            <img 
+              src="/logo.png" 
+              alt="GoOne Logo" 
+              style={{ maxHeight: '64px', maxWidth: '200px', objectFit: 'contain', filter: 'drop-shadow(0 4px 12px rgba(56, 189, 248, 0.4))' }}
+              onError={(e) => {
+                (e.target as HTMLElement).style.display = 'none';
+              }}
+            />
           </div>
           <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700 }}>GoOne Admin Portal</h2>
           <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.875rem', color: '#94a3b8' }}>Production Executive Management Operating System</p>
