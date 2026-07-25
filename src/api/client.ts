@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { toast } from '../store/toastStore';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api/v1';
+const BASE_URL = import.meta.env.VITE_API_URL || 'https://api.goone.tech/api/v1';
 
 export const apiClient = axios.create({
   baseURL: BASE_URL,
@@ -15,28 +15,123 @@ export const apiClient = axios.create({
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('goone_admin_token');
-    if (token) {
+    const isPublicAuthRoute = config.url?.includes('/admin/auth/login') || config.url?.includes('/admin/auth/refresh');
+
+    if (token && token !== 'undefined' && token !== 'null') {
       config.headers.Authorization = `Bearer ${token}`;
+    } else if (!isPublicAuthRoute) {
+      console.warn(`[API REQUEST] ${config.method?.toUpperCase()} ${config.url} - Missing authorization token`);
     }
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// Response interceptor: Global error handling and toast notifications
-apiClient.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    const message = error.response?.data?.message || error.message || 'An unexpected error occurred';
-    toast.error(message);
-    
-    // Handle unauthorized
-    if (error.response?.status === 401) {
-      localStorage.removeItem('goone_admin_token');
-      localStorage.removeItem('auth-storage');
-      window.location.href = '/';
+let isRefreshing = false;
+let failedQueue: Array<{ resolve: (value?: unknown) => void; reject: (reason?: any) => void }> = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
     }
-    
+  });
+  failedQueue = [];
+};
+
+apiClient.interceptors.response.use(
+  (response) => {
+    // Automatically unwrap standard backend responses: { success, data, meta }
+    if (response.data && typeof response.data === 'object' && 'success' in response.data && 'data' in response.data) {
+      // Retain meta pagination data if present
+      const envelopeMeta = response.data.meta;
+      response.data = response.data.data;
+      if (envelopeMeta && typeof response.data === 'object' && response.data !== null && !Array.isArray(response.data)) {
+        (response.data as any).meta = envelopeMeta;
+      }
+    }
+    return response;
+  },
+  async (error) => {
+    const originalRequest = error.config;
+
+    // Handle unauthorized (skip if the error comes from login or refresh endpoints)
+    if (
+      error.response?.status === 401 &&
+      originalRequest &&
+      !originalRequest._retry &&
+      !originalRequest.url?.includes('/admin/auth/login') &&
+      !originalRequest.url?.includes('/admin/auth/refresh')
+    ) {
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((token) => {
+            originalRequest.headers.Authorization = 'Bearer ' + token;
+            return apiClient(originalRequest);
+          })
+          .catch((err) => {
+            return Promise.reject(err);
+          });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      const refreshToken = localStorage.getItem('goone_admin_refresh_token');
+      if (!refreshToken || refreshToken === 'undefined' || refreshToken === 'null') {
+        isRefreshing = false;
+        const { useAuthStore } = await import('../store/authStore');
+        useAuthStore.getState().logout();
+        return Promise.reject(error);
+      }
+
+      try {
+        const res = await axios.post(`${BASE_URL}/admin/auth/refresh`, {
+          refresh_token: refreshToken,
+        });
+
+        // Backend response format: { success: true, data: { access_token, refresh_token } }
+        const resData = res.data?.data || res.data;
+        const access_token = resData.access_token;
+        const new_refresh_token = resData.refresh_token || refreshToken;
+
+        if (!access_token) {
+          throw new Error('Refresh failed: No access token returned');
+        }
+
+        const { useAuthStore } = await import('../store/authStore');
+        const user = useAuthStore.getState().user;
+        if (user) {
+          useAuthStore.getState().setAuth(access_token, new_refresh_token, user);
+        }
+
+        processQueue(null, access_token);
+        originalRequest.headers.Authorization = 'Bearer ' + access_token;
+        return apiClient(originalRequest);
+      } catch (refreshError) {
+        processQueue(refreshError, null);
+        const { useAuthStore } = await import('../store/authStore');
+        useAuthStore.getState().logout();
+        toast.error('Session expired. Please log in again.');
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
+    }
+
+    // Extract exact backend error message if available
+    const backendErrorMessage = error.response?.data?.error?.message || error.response?.data?.message;
+    const message = backendErrorMessage || error.message || 'An unexpected error occurred';
+
+    // Avoid duplicating toasts for refresh failures which are handled above
+    if (!originalRequest?.url?.includes('/admin/auth/refresh')) {
+      toast.error(message);
+    }
+
     return Promise.reject(error);
   }
 );
@@ -92,8 +187,12 @@ export const api = {
     return res.data;
   },
   getSupportTickets: async () => {
-    const res = await apiClient.get('/admin/support-tickets');
-    return res.data;
+    try {
+      const res = await apiClient.get('/admin/tickets'); // Corrected from /admin/support-tickets
+      return res.data;
+    } catch (e) {
+      return []; // Return empty array on failure
+    }
   },
   getCmsContent: async () => {
     const res = await apiClient.get('/admin/cms-content');
@@ -125,6 +224,16 @@ export const api = {
   },
   getAdminUsers: async () => {
     const res = await apiClient.get('/admin/admin-users');
+    return res.data;
+  },
+  uploadAppRelease: async (appType: 'customer' | 'business' | 'partner', file: File) => {
+    const formData = new FormData();
+    formData.append('apk', file);
+    const res = await apiClient.post(`/admin/configs/app-releases/${appType}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return res.data;
   },
 };

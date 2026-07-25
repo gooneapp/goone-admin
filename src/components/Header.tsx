@@ -13,19 +13,8 @@ import {
 import { Badge } from './Badge';
 
 export const Header: React.FC = () => {
-  const { user, logout, switchRole } = useAuthStore();
-  const [showRoleMenu, setShowRoleMenu] = useState(false);
+  const { user, logout } = useAuthStore();
   const [showNotifications, setShowNotifications] = useState(false);
-
-  const rolesList: { role: AdminRole; label: string; desc: string }[] = [
-    { role: 'super_admin', label: 'Super Admin', desc: 'Full platform access & administrative governance' },
-    { role: 'admin', label: 'Admin', desc: 'Platform operations, KYC review, category management' },
-    { role: 'manager', label: 'Operations Manager', desc: 'SLA tracking, ticket assignment, partner verification' },
-    { role: 'support', label: 'Support Agent', desc: 'Customer/partner tickets, resolution, internal notes' },
-    { role: 'finance', label: 'Finance Lead', desc: 'Subscriptions, credit accounts, pricing, payment audits' },
-    { role: 'marketing', label: 'Marketing Lead', desc: 'Advertisements, banners, announcements, i18n content' },
-    { role: 'operations', label: 'Fleet & Logistics Lead', desc: 'Delivery partners, ride drivers, inventory monitoring' },
-  ];
 
   const currentRole = user?.role || 'super_admin';
 
@@ -65,79 +54,10 @@ export const Header: React.FC = () => {
 
       {/* Action Controls */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        {/* Interactive RBAC Role Selector Dropdown */}
-        <div style={{ position: 'relative' }}>
-          <button
-            onClick={() => setShowRoleMenu(!showRoleMenu)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              background: '#1e293b',
-              border: '1px solid #38bdf8',
-              borderRadius: '8px',
-              padding: '0.4rem 0.75rem',
-              color: '#38bdf8',
-              fontSize: '0.825rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
-            <UserCheck size={16} />
-            <span>Switch Role: {currentRole.replace('_', ' ').toUpperCase()}</span>
-            <ChevronDown size={14} />
-          </button>
-
-          {showRoleMenu && (
-            <div
-              style={{
-                position: 'absolute',
-                right: 0,
-                top: '110%',
-                background: '#0f172a',
-                border: '1px solid #334155',
-                borderRadius: '12px',
-                padding: '0.5rem',
-                width: '320px',
-                boxShadow: '0 20px 40px rgba(0, 0, 0, 0.6)',
-                zIndex: 100,
-              }}
-            >
-              <div style={{ padding: '0.5rem 0.75rem', borderBottom: '1px solid #1e293b', fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Test RBAC Role Access
-              </div>
-              {rolesList.map((r) => (
-                <button
-                  key={r.role}
-                  onClick={() => {
-                    switchRole(r.role);
-                    setShowRoleMenu(false);
-                  }}
-                  style={{
-                    display: 'block',
-                    width: '100%',
-                    textAlign: 'left',
-                    padding: '0.55rem 0.75rem',
-                    background: currentRole === r.role ? 'rgba(56, 189, 248, 0.15)' : 'transparent',
-                    border: 'none',
-                    borderRadius: '8px',
-                    color: currentRole === r.role ? '#38bdf8' : '#e2e8f0',
-                    cursor: 'pointer',
-                    marginBottom: '0.2rem',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (currentRole !== r.role) e.currentTarget.style.background = '#1e293b';
-                  }}
-                  onMouseLeave={(e) => {
-                    if (currentRole !== r.role) e.currentTarget.style.background = 'transparent';
-                  }}
-                >
-                  <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{r.label}</div>
-                  <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{r.desc}</div>
-                </button>
-              ))}
-            </div>
-          )}
+        {/* Role Display */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', padding: '0.4rem 0.75rem', color: '#94a3b8', fontSize: '0.825rem', fontWeight: 600 }}>
+          <UserCheck size={16} />
+          <span>Role: {currentRole.replace('_', ' ').toUpperCase()}</span>
         </div>
 
         {/* Notifications Icon Bell */}

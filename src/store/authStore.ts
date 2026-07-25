@@ -3,85 +3,100 @@ import { AdminUser, AdminRole } from '../types';
 
 interface AuthState {
   token: string | null;
+  refreshToken: string | null;
   user: AdminUser | null;
   isAuthenticated: boolean;
-  setAuth: (token: string, user: AdminUser) => void;
+  isCheckingAuth: boolean;
+  setAuth: (token: string, refreshToken: string, user: AdminUser) => void;
   logout: () => void;
-  switchRole: (role: AdminRole) => void;
+  checkAuth: () => Promise<void>;
   hasPermission: (requiredRoles: AdminRole[]) => boolean;
 }
 
-const DEFAULT_ADMIN: AdminUser = {
-  id: 'admin-001-super',
-  email: 'superadmin@goone.in',
-  name: 'GoOne Platform Director',
-  role: 'super_admin',
-  active: true,
-  createdAt: new Date().toISOString(),
+const getSanitizedStorageItem = (key: string): string | null => {
+  try {
+    const val = localStorage.getItem(key);
+    if (!val || val === 'undefined' || val === 'null' || val.trim() === '') {
+      return null;
+    }
+    return val;
+  } catch {
+    return null;
+  }
 };
 
-function getInitialUser(): AdminUser | null {
+const initialToken = getSanitizedStorageItem('goone_admin_token');
+const initialRefreshToken = getSanitizedStorageItem('goone_admin_refresh_token');
+const initialUserString = getSanitizedStorageItem('goone_admin_user');
+
+let initialUser: AdminUser | null = null;
+if (initialUserString) {
   try {
-    const raw = localStorage.getItem('goone_admin_user');
-    if (!raw || raw === 'undefined' || raw === 'null') return null;
-    const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === 'object' && parsed.role ? parsed : null;
+    initialUser = JSON.parse(initialUserString);
   } catch {
-    return null;
+    initialUser = null;
   }
 }
 
-function getInitialToken(): string | null {
-  try {
-    const token = localStorage.getItem('goone_admin_token');
-    return token && token !== 'undefined' ? token : null;
-  } catch {
-    return null;
-  }
-}
-
-const initialToken = getInitialToken();
-const initialUser = getInitialUser();
+const hasInitialAuth = !!initialToken && !!initialUser;
 
 export const useAuthStore = create<AuthState>((set, get) => ({
-  token: initialToken,
   user: initialUser,
-  isAuthenticated: !!initialToken && !!initialUser,
+  token: initialToken,
+  refreshToken: initialRefreshToken,
+  isAuthenticated: hasInitialAuth,
+  isCheckingAuth: hasInitialAuth, // Verify token on startup if we have an existing session
 
-  setAuth: (token: string, user: AdminUser) => {
+  setAuth: (token: string, refreshToken: string, user: AdminUser) => {
     try {
       localStorage.setItem('goone_admin_token', token);
+      localStorage.setItem('goone_admin_refresh_token', refreshToken);
       localStorage.setItem('goone_admin_user', JSON.stringify(user));
     } catch (e) {
       console.warn('LocalStorage error:', e);
     }
-    set({ token, user, isAuthenticated: true });
+    set({ token, refreshToken, user, isAuthenticated: true, isCheckingAuth: false });
   },
 
   logout: () => {
     try {
       localStorage.removeItem('goone_admin_token');
+      localStorage.removeItem('goone_admin_refresh_token');
       localStorage.removeItem('goone_admin_user');
+      localStorage.removeItem('auth-storage');
     } catch (e) {
       console.warn('LocalStorage error:', e);
     }
-    set({ token: null, user: null, isAuthenticated: false });
+    set({ user: null, token: null, refreshToken: null, isAuthenticated: false, isCheckingAuth: false });
   },
 
-  switchRole: (role: AdminRole) => {
-    const currentUser = get().user || DEFAULT_ADMIN;
-    const updatedUser: AdminUser = {
-      ...currentUser,
-      role,
-      name: `GoOne ${role.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}`,
-      email: `${role.replace('_', '')}@goone.in`,
-    };
-    try {
-      localStorage.setItem('goone_admin_user', JSON.stringify(updatedUser));
-    } catch (e) {
-      console.warn('LocalStorage error:', e);
+  checkAuth: async () => {
+    const currentToken = get().token;
+    if (!currentToken) {
+      set({ isAuthenticated: false, user: null, isCheckingAuth: false });
+      return;
     }
-    set({ user: updatedUser });
+
+    try {
+      const { apiClient } = await import('../api/client');
+      const res = await apiClient.get('/admin/auth/me');
+      const adminData = res.data?.admin || res.data;
+      if (adminData && adminData.id) {
+        set({ user: adminData, isAuthenticated: true, isCheckingAuth: false });
+        localStorage.setItem('goone_admin_user', JSON.stringify(adminData));
+      } else {
+        get().logout();
+      }
+    } catch (err) {
+      // If validation fails and no valid token remains in store, log out
+      if (!get().token) {
+        get().logout();
+      } else {
+        set({ isCheckingAuth: false });
+      }
+    } finally {
+      set({ isCheckingAuth: false });
+    }
   },
 
   hasPermission: (requiredRoles: AdminRole[]) => {

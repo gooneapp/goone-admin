@@ -126,8 +126,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate }) => 
     >
       {/* Brand logo */}
       <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #1e293b', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-        <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, #0284c7, #38bdf8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: '#ffffff', fontSize: '1.2rem', boxShadow: '0 0 15px rgba(56, 189, 248, 0.4)' }}>
-          GO
+        <div style={{ width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <img src="/logo.png" alt="GoOne Logo" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
         </div>
         <div>
           <h1 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: '#f8fafc', letterSpacing: '0.5px' }}>GoOne Admin</h1>

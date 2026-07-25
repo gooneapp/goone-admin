@@ -5,9 +5,8 @@ import { ShieldCheck, Lock, Mail, UserCheck } from 'lucide-react';
 
 export const Login: React.FC = () => {
   const { setAuth } = useAuthStore();
-  const [email, setEmail] = useState('superadmin@goone.in');
+  const [email, setEmail] = useState('admin@gon.com');
   const [password, setPassword] = useState('password123');
-  const [selectedRole, setSelectedRole] = useState<AdminRole>('super_admin');
 
   const [isLoading, setIsLoading] = useState(false);
 
@@ -15,31 +14,28 @@ export const Login: React.FC = () => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      // Import api client dynamically or rely on global apiClient
       const { apiClient } = await import('../api/client');
       const res = await apiClient.post('/admin/auth/login', { email, password });
       
-      const { token, admin } = res.data.data;
-      setAuth(token, admin);
+      const payload = res.data?.data || res.data;
+      const finalToken = payload?.access_token || payload?.token;
+      const refreshToken = payload?.refresh_token || '';
+      const adminUser = payload?.admin;
+      
+      if (!finalToken) {
+        throw new Error('No authorization token received from server.');
+      }
+      
+      setAuth(finalToken, refreshToken, adminUser);
       
       const { toast } = await import('../store/toastStore');
       toast.success('Successfully logged in');
     } catch (err) {
-      // Error is handled globally by interceptor with a toast
+      // API error toasts are handled by apiClient response interceptor
     } finally {
       setIsLoading(false);
     }
   };
-
-  const roles: { role: AdminRole; label: string }[] = [
-    { role: 'super_admin', label: 'Super Admin' },
-    { role: 'admin', label: 'Admin' },
-    { role: 'manager', label: 'Operations Manager' },
-    { role: 'support', label: 'Support Agent' },
-    { role: 'finance', label: 'Finance Lead' },
-    { role: 'marketing', label: 'Marketing Lead' },
-    { role: 'operations', label: 'Fleet & Logistics Lead' },
-  ];
 
   return (
     <div style={{ minHeight: '100vh', background: 'radial-gradient(circle at top right, #1e293b, #090d16)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', color: '#f8fafc' }}>
@@ -78,22 +74,6 @@ export const Login: React.FC = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 style={{ width: '100%', padding: '0.65rem 0.75rem 0.65rem 2.25rem', background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', color: '#f8fafc', fontSize: '0.9rem', outline: 'none' }}
               />
-            </div>
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 500, color: '#cbd5e1', marginBottom: '0.4rem' }}>Select Role Security Scope</label>
-            <div style={{ position: 'relative' }}>
-              <UserCheck size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#38bdf8' }} />
-              <select
-                value={selectedRole}
-                onChange={(e) => setSelectedRole(e.target.value as AdminRole)}
-                style={{ width: '100%', padding: '0.65rem 0.75rem 0.65rem 2.25rem', background: '#1e293b', border: '1px solid #0284c7', borderRadius: '8px', color: '#38bdf8', fontWeight: 600, fontSize: '0.9rem', outline: 'none' }}
-              >
-                {roles.map((r) => (
-                  <option key={r.role} value={r.role}>{r.label}</option>
-                ))}
-              </select>
             </div>
           </div>
 

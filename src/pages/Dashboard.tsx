@@ -75,7 +75,7 @@ export const Dashboard: React.FC = () => {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
         <StatCard
           title="Active Businesses"
-          value={summary?.active_businesses.toLocaleString() || '4,120'}
+          value={summary?.active_businesses?.toLocaleString() || '4,120'}
           icon={<Building2 size={20} />}
           trend={{ value: '+34 today', isPositive: true }}
           subtitle={`out of ${summary?.total_businesses || 4850} total`}
@@ -83,7 +83,7 @@ export const Dashboard: React.FC = () => {
         />
         <StatCard
           title="Daily Orders Volume"
-          value={summary?.today_orders.toLocaleString() || '14,200'}
+          value={(summary as any)?.today_orders?.toLocaleString() || summary?.total_orders?.toLocaleString() || '14,200'}
           icon={<ShoppingCart size={20} />}
           trend={{ value: '+14.2%', isPositive: true }}
           subtitle="vs previous 7-day avg"
@@ -91,7 +91,7 @@ export const Dashboard: React.FC = () => {
         />
         <StatCard
           title="Today Gross Revenue"
-          value={`₹${((summary?.today_revenue || 2350000) / 100000).toFixed(2)}L`}
+          value={`₹${((((summary as any)?.today_revenue || summary?.total_revenue) || 2350000) / 100000).toFixed(2)}L`}
           icon={<DollarSign size={20} />}
           trend={{ value: '+18.5%', isPositive: true }}
           subtitle="Cash & UPI settlement"
@@ -99,7 +99,7 @@ export const Dashboard: React.FC = () => {
         />
         <StatCard
           title="Verified Delivery Fleet"
-          value={summary?.total_verified_partners || '890'}
+          value={(summary as any)?.total_verified_partners?.toLocaleString() || '890'}
           icon={<Truck size={20} />}
           trend={{ value: '145 active now', isPositive: true }}
           subtitle="Auto & Car drivers included"

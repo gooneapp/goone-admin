@@ -4,7 +4,8 @@ import { FeatureToggle, WebsiteConfig } from '../types';
 import { DataTable, Column } from '../components/DataTable';
 import { Badge } from '../components/Badge';
 import { Tabs } from '../components/Tabs';
-import { Settings, Sliders, ShieldCheck } from 'lucide-react';
+import { AppReleases } from '../components/AppReleases';
+import { Settings, Sliders, Smartphone } from 'lucide-react';
 
 export const SettingsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('toggles');
@@ -60,6 +61,7 @@ export const SettingsPage: React.FC = () => {
         tabs={[
           { id: 'toggles', label: 'Regional & Category Feature Matrix', count: toggles.length, icon: <Sliders size={16} /> },
           { id: 'configs', label: 'System Configuration Variables', count: configs.length, icon: <Settings size={16} /> },
+          { id: 'releases', label: 'App Releases (APKs)', count: 3, icon: <Smartphone size={16} /> },
         ]}
         activeTab={activeTab}
         onChange={setActiveTab}
@@ -73,7 +75,7 @@ export const SettingsPage: React.FC = () => {
           data={toggles}
           keyExtractor={(item) => item.id}
         />
-      ) : (
+      ) : activeTab === 'configs' ? (
         <DataTable
           title="Runtime App Configuration Variables"
           subtitle="Configure ride minimum distances (Auto 5km / Car 15km), trial days, grace periods, and OTP timeouts."
@@ -81,6 +83,8 @@ export const SettingsPage: React.FC = () => {
           data={configs}
           keyExtractor={(item) => item.id}
         />
+      ) : (
+        <AppReleases />
       )}
     </div>
   );

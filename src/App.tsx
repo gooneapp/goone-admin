@@ -31,8 +31,23 @@ import { MasterData } from './pages/MasterData';
 import { AdminUserList } from './pages/AdminUserList';
 
 export function App() {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, isCheckingAuth, checkAuth } = useAuthStore();
   const [currentPath, setCurrentPath] = useState('/dashboard');
+
+  React.useEffect(() => {
+    checkAuth();
+  }, []);
+
+  if (isCheckingAuth) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#090d16', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#f8fafc', fontFamily: 'system-ui, sans-serif' }}>
+        <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'linear-gradient(135deg, #0284c7, #38bdf8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.5rem', color: '#fff', marginBottom: '1rem', boxShadow: '0 0 25px rgba(56, 189, 248, 0.5)' }}>
+          GO
+        </div>
+        <div style={{ fontSize: '1.1rem', fontWeight: 600, color: '#94a3b8' }}>Verifying Admin Session...</div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return <Login />;
