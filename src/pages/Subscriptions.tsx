@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../api/client';
+import { toast } from '../store/toastStore';
 import { Subscription, SubscriptionPlan, SubscriptionStatus } from '../types';
 import { DataTable, Column } from '../components/DataTable';
 import { Badge } from '../components/Badge';
@@ -20,16 +21,25 @@ export const Subscriptions: React.FC = () => {
     api.getSubscriptionPlans().then(setPlans);
   }, []);
 
-  const handleOverride = (reason: string) => {
+  const handleOverride = async (reason: string) => {
     if (!selectedSub) return;
-    setSubs(prev => prev.map(s => s.id === selectedSub.id ? { ...s, status: 'active' as SubscriptionStatus } : s));
-    alert(`Subscription for ${selectedSub.businessName} manually extended. Reason: ${reason}`);
+    try {
+      await api.overrideSubscription(selectedSub.businessId, {
+        plan_id: selectedSub.planId,
+        reason,
+        extend_days: 30,
+      });
+      setSubs(prev => prev.map(s => s.id === selectedSub.id ? { ...s, status: 'active' as SubscriptionStatus } : s));
+      toast.success(`Subscription for ${selectedSub.business?.name} manually extended. Reason: ${reason}`);
+    } catch {
+      // Error toast already shown by the global API error interceptor.
+    }
   };
 
   const subColumns: Column<Subscription>[] = [
-    { key: 'businessName', header: 'Shop Business', sortable: true },
-    { key: 'ownerName', header: 'Owner Name', render: (_, row) => `${row.ownerName || ''} (${row.ownerPhone || ''})` },
-    { key: 'planName', header: 'Subscribed Tier', sortable: true, render: (val) => <span style={{ fontWeight: 600, color: '#38bdf8' }}>{val}</span> },
+    { key: 'business', header: 'Shop Business', accessor: (row) => row.business?.name || '-' },
+    { key: 'owner', header: 'Owner Name', accessor: (row) => `${row.business?.owner?.name || '-'} (${row.business?.owner?.phoneNumber || '-'})` },
+    { key: 'plan', header: 'Subscribed Tier', accessor: (row) => row.plan?.name || '-', render: (val) => <span style={{ fontWeight: 600, color: '#38bdf8' }}>{val}</span> },
     {
       key: 'status',
       header: 'Billing Status',
@@ -42,23 +52,27 @@ export const Subscriptions: React.FC = () => {
       },
     },
     { key: 'endDate', header: 'Expiry Date', sortable: true, render: (val) => new Date(val).toLocaleDateString() },
-    { key: 'lastPaymentAmount', header: 'Last Paid (₹)', render: (val) => val ? `₹${val}` : '-' },
+    { key: 'paymentRef', header: 'Payment Ref', render: (val) => val || '-' },
   ];
 
   const planColumns: Column<SubscriptionPlan>[] = [
     { key: 'name', header: 'Plan Name', sortable: true },
+    { key: 'description', header: 'Description', render: (val) => val || '-' },
     { key: 'priceMonthly', header: 'Monthly Fee (₹)', render: (val) => `₹${val}` },
-    { key: 'priceAnnual', header: 'Annual Fee (₹)', render: (val) => `₹${val}` },
-    { key: 'maxEmployees', header: 'Max Staff Seats', render: (val) => `${val} employees` },
     {
       key: 'features',
-      header: 'Included Feature Bitmasks',
-      render: (val: string[]) => (
+      header: 'Included Features',
+      render: (val: Record<string, boolean>) => (
         <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
-          {val.map(f => <span key={f} style={{ background: '#1e293b', padding: '0.15rem 0.45rem', borderRadius: '4px', fontSize: '0.75rem', color: '#cbd5e1' }}>{f}</span>)}
+          {Object.entries(val || {})
+            .filter(([, enabled]) => enabled)
+            .map(([feature]) => (
+              <span key={feature} style={{ background: '#1e293b', padding: '0.15rem 0.45rem', borderRadius: '4px', fontSize: '0.75rem', color: '#cbd5e1' }}>{feature.replace(/_/g, ' ')}</span>
+            ))}
         </div>
       ),
     },
+    { key: 'isActive', header: 'Status', render: (val) => <Badge variant={val ? 'success' : 'neutral'}>{val ? 'Active' : 'Inactive'}</Badge> },
   ];
 
   return (
@@ -107,7 +121,7 @@ export const Subscriptions: React.FC = () => {
         isOpen={isOverrideOpen}
         onClose={() => setIsOverrideOpen(false)}
         onConfirm={handleOverride}
-        title={`Manual Subscription Override: ${selectedSub?.businessName}`}
+        title={`Manual Subscription Override: ${selectedSub?.business?.name}`}
         message="Manually granting plan access or waiving payment requires a mandatory audit log entry."
         confirmText="Grant & Extend Access"
         variant="warning"

@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { useAuthStore } from '../store/authStore';
-import { AdminRole } from '../types';
-import { ShieldCheck, Lock, Mail, UserCheck } from 'lucide-react';
+import { ShieldCheck, Lock, Mail } from 'lucide-react';
 
 export const Login: React.FC = () => {
   const { setAuth } = useAuthStore();
-  const [email, setEmail] = useState('admin@gon.com');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
   const [isLoading, setIsLoading] = useState(false);
 
@@ -63,6 +62,8 @@ export const Login: React.FC = () => {
               <input
                 type="email"
                 required
+                autoComplete="username"
+                autoFocus
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 style={{ width: '100%', padding: '0.65rem 0.75rem 0.65rem 2.25rem', background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', color: '#f8fafc', fontSize: '0.9rem', outline: 'none' }}
@@ -77,6 +78,7 @@ export const Login: React.FC = () => {
               <input
                 type="password"
                 required
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 style={{ width: '100%', padding: '0.65rem 0.75rem 0.65rem 2.25rem', background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', color: '#f8fafc', fontSize: '0.9rem', outline: 'none' }}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bell, Send, MessageSquare, PhoneCall, Smartphone } from 'lucide-react';
+import { Send, TriangleAlert as AlertTriangle } from 'lucide-react';
 
 export const NotificationCenter: React.FC = () => {
   const [targetAudience, setTargetAudience] = useState('all_merchants');
@@ -7,20 +7,20 @@ export const NotificationCenter: React.FC = () => {
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
 
-  const handleBroadcast = (e: React.FormEvent) => {
-    e.preventDefault();
-    alert(`Broadcast Notification dispatched via ${channel.toUpperCase()} to ${targetAudience}. Title: ${title}`);
-    setTitle('');
-    setMessage('');
-  };
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <div style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.35)', borderRadius: '12px', padding: '1rem 1.25rem', display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+        <AlertTriangle color="#f59e0b" size={20} style={{ flexShrink: 0, marginTop: '2px' }} />
+        <div style={{ fontSize: '0.85rem', color: '#fde68a', lineHeight: '1.5' }}>
+          <strong>Broadcast dispatch isn't wired up yet.</strong> The backend has no admin broadcast endpoint (only per-user notification listing/read APIs exist today), so sending here would not actually reach any device. This form is disabled until that API is built.
+        </div>
+      </div>
+
       <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: '12px', padding: '1.5rem', color: '#f8fafc' }}>
         <h2 style={{ margin: '0 0 0.5rem 0', fontSize: '1.25rem', fontWeight: 600 }}>Notification & Broadcast Alert Center</h2>
         <p style={{ margin: '0 0 1.5rem 0', fontSize: '0.875rem', color: '#94a3b8' }}>Dispatch in-app push notifications, SMS alerts (MSG91), or Exotel voice reminders.</p>
 
-        <form onSubmit={handleBroadcast} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxWidth: '600px' }}>
+        <form onSubmit={(e) => e.preventDefault()} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxWidth: '600px' }}>
           <div>
             <label style={{ display: 'block', fontSize: '0.85rem', color: '#cbd5e1', marginBottom: '0.3rem' }}>Target User Audience</label>
             <select
@@ -73,7 +73,9 @@ export const NotificationCenter: React.FC = () => {
 
           <button
             type="submit"
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: 'linear-gradient(135deg, #0284c7, #38bdf8)', border: 'none', color: '#fff', padding: '0.75rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 700 }}
+            disabled
+            title="Not available yet — no backend broadcast endpoint"
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: '#334155', border: 'none', color: '#94a3b8', padding: '0.75rem', borderRadius: '8px', cursor: 'not-allowed', fontWeight: 700 }}
           >
             <Send size={16} /> Broadcast Notification Now
           </button>

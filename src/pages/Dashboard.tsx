@@ -194,11 +194,11 @@ export const Dashboard: React.FC = () => {
             {orders.map((o) => (
               <div key={o.id} style={{ background: '#1e293b', border: '1px solid #334155', padding: '0.85rem', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <div style={{ fontWeight: 600, fontSize: '0.875rem', color: '#f8fafc' }}>{o.orderNumber} • {o.businessName}</div>
-                  <div style={{ fontSize: '0.775rem', color: '#94a3b8' }}>Customer: {o.customerName} | {o.itemsCount} items</div>
+                  <div style={{ fontWeight: 600, fontSize: '0.875rem', color: '#f8fafc' }}>ORD-{o.id.slice(0, 8).toUpperCase()} • {o.business?.name || '-'}</div>
+                  <div style={{ fontSize: '0.775rem', color: '#94a3b8' }}>Customer: {o.customer?.name || 'Walk-in'} | {o.items?.length ?? 0} items</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontWeight: 700, color: '#34d399', fontSize: '0.9rem' }}>₹{o.totalAmount.toFixed(2)}</div>
+                  <div style={{ fontWeight: 700, color: '#34d399', fontSize: '0.9rem' }}>₹{Number(o.totalAmount).toFixed(2)}</div>
                   <Badge variant={o.status === 'completed' ? 'success' : o.status === 'out_for_delivery' ? 'info' : 'warning'}>
                     {o.status.replace('_', ' ')}
                   </Badge>

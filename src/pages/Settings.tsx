@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../api/client';
+import { toast } from '../store/toastStore';
+import { useAuthStore } from '../store/authStore';
 import { FeatureToggle, WebsiteConfig } from '../types';
 import { DataTable, Column } from '../components/DataTable';
 import { Badge } from '../components/Badge';
@@ -11,14 +13,26 @@ export const SettingsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('toggles');
   const [toggles, setToggles] = useState<FeatureToggle[]>([]);
   const [configs, setConfigs] = useState<WebsiteConfig[]>([]);
+  const isSuperAdmin = useAuthStore((s) => s.user?.role === 'super_admin');
 
   useEffect(() => {
     api.getFeatureToggles().then(setToggles);
     api.getWebsiteConfigs().then(setConfigs);
   }, []);
 
-  const handleToggleFeature = (id: string) => {
-    setToggles(prev => prev.map(t => t.id === id ? { ...t, isEnabled: !t.isEnabled } : t));
+  const handleToggleFeature = async (row: FeatureToggle) => {
+    if (!isSuperAdmin) {
+      toast.error('Only Super Admins can change feature toggles.');
+      return;
+    }
+    const nextValue = !row.isEnabled;
+    try {
+      await api.updateFeatureToggle(row.featureKey, nextValue);
+      setToggles(prev => prev.map(t => t.id === row.id ? { ...t, isEnabled: nextValue } : t));
+      toast.success(`${row.featureKey} ${nextValue ? 'enabled' : 'disabled'}.`);
+    } catch {
+      // Error toast already shown by the global API error interceptor.
+    }
   };
 
   const toggleColumns: Column<FeatureToggle>[] = [
@@ -30,14 +44,17 @@ export const SettingsPage: React.FC = () => {
       header: 'Toggle State',
       render: (val, row) => (
         <button
-          onClick={() => handleToggleFeature(row.id)}
+          onClick={() => handleToggleFeature(row)}
+          disabled={!isSuperAdmin}
+          title={isSuperAdmin ? undefined : 'Only Super Admins can change feature toggles'}
           style={{
             background: val ? '#10b981' : '#334155',
             border: 'none',
             color: '#fff',
             padding: '0.35rem 0.85rem',
             borderRadius: '20px',
-            cursor: 'pointer',
+            cursor: isSuperAdmin ? 'pointer' : 'not-allowed',
+            opacity: isSuperAdmin ? 1 : 0.6,
             fontWeight: 600,
             fontSize: '0.8rem',
           }}

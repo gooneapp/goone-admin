@@ -17,19 +17,17 @@ export interface AdminUser {
   createdAt: string;
 }
 
-export type UserType = 'customer' | 'business_owner' | 'employee' | 'delivery_partner' | 'ride_driver' | 'admin';
+export type UserDefaultRole = 'business' | 'customer' | 'delivery';
 
 export interface SystemUser {
   id: string;
   phoneNumber: string;
   name: string;
-  email?: string;
-  userType: UserType;
+  roleDefault: UserDefaultRole;
   preferredLanguage: 'ta' | 'en' | 'hi';
   isVerified: boolean;
-  active: boolean;
+  biometricEnabled: boolean;
   createdAt: string;
-  lastLoginAt?: string;
 }
 
 export type BusinessStatus = 'pending_verification' | 'active' | 'suspended';
@@ -86,7 +84,6 @@ export type CategoryAppliesTo = 'business_type' | 'product_category';
 export interface Category {
   id: string;
   name: string;
-  slug: string;
   description?: string;
   nameTranslations?: {
     ta?: string;
@@ -96,8 +93,7 @@ export interface Category {
   appliesTo: CategoryAppliesTo;
   parentId?: string;
   parentName?: string;
-  extensionModule?: 'Hospitality' | 'Medical' | 'MilkWater' | 'Farmer' | 'ServiceProvider' | 'None';
-  active: boolean;
+  isActive: boolean;
 }
 
 export interface Product {
@@ -125,30 +121,25 @@ export type PaymentMethod = 'cash' | 'upi' | 'credit';
 
 export interface OrderItem {
   id: string;
-  productName: string;
+  name: string;
   quantity: number;
   unitPrice: number;
-  totalPrice: number;
+  subtotal: number;
 }
 
 export interface Order {
   id: string;
-  orderNumber: string;
   businessId: string;
-  businessName: string;
-  customerUserId: string;
-  customerName: string;
-  customerPhone: string;
+  business?: { name: string };
+  customerUserId?: string;
+  customer?: { name: string; phoneNumber: string };
   totalAmount: number;
   status: OrderStatus;
   paymentStatus: PaymentStatus;
   paymentMethod: PaymentMethod;
-  itemsCount: number;
   items?: OrderItem[];
-  kotStatus?: 'open' | 'in_progress' | 'served' | 'cancelled';
-  tableNumber?: string;
-  isDelivery: boolean;
-  deliveryAddress?: string;
+  delivery?: { id: string } | null;
+  kot?: { status: 'open' | 'in_progress' | 'served' | 'cancelled'; table?: { tableNumber: string } | null } | null;
   createdAt: string;
 }
 
@@ -173,6 +164,48 @@ export interface PartnerVehicle {
   createdAt: string;
 }
 
+// Shape matches the raw Prisma RideRequest row returned by GET /admin/rides
+// (customer + ride.partner included) — Decimal columns (estimatedDistanceKm,
+// adminDistanceKm, fareAmount) serialize as numeric strings over JSON.
+export interface CustomerRideRequest {
+  id: string;
+  vehicleType: VehicleServiceType;
+  pickupLat: string;
+  pickupLng: string;
+  dropLat: string;
+  dropLng: string;
+  estimatedDistanceKm: string;
+  adminDistanceKm: string | null;
+  bookingType: 'instant' | 'scheduled';
+  scheduledAt: string | null;
+  status: 'requested' | 'matched' | 'cancelled' | 'expired';
+  createdAt: string;
+  customer?: { name: string; phoneNumber: string };
+  ride?: {
+    id: string;
+    status: string;
+    fareAmount: string | null;
+    otpCode: string;
+    partner?: { name: string; phoneNumber: string } | null;
+  } | null;
+}
+
+export interface RideFareSlab {
+  id?: string;
+  min_km: number;
+  max_km: number | null;
+  per_km_rate: number;
+}
+
+export interface RideFareConfig {
+  vehicle_type: VehicleServiceType;
+  base_fare: number;
+  min_km: number;
+  max_km: number | null;
+  default_per_km_rate: number;
+  slabs: RideFareSlab[];
+}
+
 export interface DeliveryJob {
   id: string;
   orderId: string;
@@ -193,27 +226,25 @@ export type SubscriptionStatus = 'trial' | 'active' | 'grace' | 'locked';
 export interface SubscriptionPlan {
   id: string;
   name: string;
+  description?: string;
   priceMonthly: number;
-  priceAnnual: number;
-  maxEmployees: number;
-  features: string[];
-  active: boolean;
+  features: Record<string, boolean>;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: string;
 }
 
 export interface Subscription {
   id: string;
   businessId: string;
-  businessName?: string;
-  ownerName?: string;
-  ownerPhone?: string;
   planId: string;
-  planName?: string;
   status: SubscriptionStatus;
   startDate: string;
   endDate: string;
   gracePeriodEnd?: string;
-  lastPaymentAmount?: number;
-  lastPaymentDate?: string;
+  paymentRef?: string;
+  business?: { name: string; ownerUserId: string; owner?: { name: string; phoneNumber: string } };
+  plan?: { name: string; priceMonthly: string };
 }
 
 export interface CreditAccount {
@@ -340,20 +371,34 @@ export interface AuditLog {
 export interface ApiKey {
   id: string;
   name: string;
-  keyPrefix: string;
-  role: string;
-  rateLimitPerMin: number;
-  active: boolean;
+  keyPreview: string;
+  scopes: string[];
+  isActive: boolean;
   lastUsedAt?: string;
+  expiresAt?: string;
   createdAt: string;
+  admin?: { name: string; email: string };
 }
 
-export interface SystemServiceStatus {
-  name: string;
-  status: 'healthy' | 'degraded' | 'down';
-  latencyMs: number;
-  uptimePercentage: number;
-  lastChecked: string;
+export interface SystemHealthService {
+  status: 'connected' | 'down' | 'configured';
+  latencyMs?: number;
+  provider?: string;
+}
+
+export interface SystemHealth {
+  status: 'healthy' | 'degraded';
+  uptime: number;
+  timestamp: string;
+  services: {
+    database: SystemHealthService;
+    redis: SystemHealthService;
+    storage: SystemHealthService;
+  };
+  metrics: {
+    memoryUsageMb: number;
+    loadAverage: number[];
+  };
 }
 
 export interface AnalyticsSummary {

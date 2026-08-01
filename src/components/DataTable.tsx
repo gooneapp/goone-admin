@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Search, 
   ChevronDown, 
@@ -75,6 +75,24 @@ export function DataTable<T extends Record<string, any>>({
   const [pageSize, setPageSize] = useState(defaultPageSize);
   const [showColMenu, setShowColMenu] = useState(false);
   const [activeMenuRowId, setActiveMenuRowId] = useState<string | null>(null);
+
+  // A parent may swap `columns` (and implicitly the dataset) between renders at the
+  // same JSX position — e.g. a tabbed page rendering different <DataTable> configs
+  // for each tab. React reuses this component instance rather than remounting it,
+  // so all the state above would otherwise carry over from the previous column set:
+  // `visibleColumns` in particular would then filter out every column of the new
+  // table, silently rendering headerless, cell-less rows. Reset per-table UI state
+  // whenever the actual set of column keys changes.
+  const columnsSignature = columns.map(c => c.key).join('|');
+  useEffect(() => {
+    setVisibleColumns(new Set(columns.map(c => c.key)));
+    setSearchTerm('');
+    setSortKey(null);
+    setColumnFilter({});
+    setCurrentPage(1);
+    setSelectedIds(new Set());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [columnsSignature]);
 
   // 1. Search & Filtering
   const filteredData = useMemo(() => {

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../api/client';
+import { toast } from '../store/toastStore';
 import { SupportTicket } from '../types';
 import { DataTable, Column } from '../components/DataTable';
 import { Badge } from '../components/Badge';
@@ -15,10 +16,15 @@ export const SupportTickets: React.FC = () => {
     api.getSupportTickets().then(setTickets);
   }, []);
 
-  const handleUpdateTicketStatus = (ticket: SupportTicket, newStatus: string) => {
-    setTickets(prev => prev.map(t => t.id === ticket.id ? { ...t, status: newStatus as any } : t));
-    alert(`Ticket ${ticket.ticketNumber} updated to status: ${newStatus.toUpperCase()}`);
-    setIsModalOpen(false);
+  const handleUpdateTicketStatus = async (ticket: SupportTicket, newStatus: string) => {
+    try {
+      await api.updateSupportTicket(ticket.id, { status: newStatus });
+      setTickets(prev => prev.map(t => t.id === ticket.id ? { ...t, status: newStatus as any } : t));
+      toast.success(`Ticket ${ticket.ticketNumber} updated to status: ${newStatus.toUpperCase()}`);
+      setIsModalOpen(false);
+    } catch {
+      // Error toast already shown by the global API error interceptor.
+    }
   };
 
   const columns: Column<SupportTicket>[] = [

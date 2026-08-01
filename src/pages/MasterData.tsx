@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Database, Plus, MapPin, Percent, Edit, Trash } from 'lucide-react';
+import { Plus, MapPin, Percent, Edit, Trash, TriangleAlert as AlertTriangle } from 'lucide-react';
 import { Tabs } from '../components/Tabs';
 import { DataTable, Column, RowAction } from '../components/DataTable';
 import { Badge } from '../components/Badge';
@@ -31,31 +31,27 @@ export const MasterData: React.FC = () => {
     if (activeTab === 'cities') {
       if (editingItem.id) {
         setCitiesData(citiesData.map(c => c.id === editingItem.id ? editingItem : c));
-        toast.success('City updated successfully');
       } else {
         setCitiesData([...citiesData, { ...editingItem, id: `city-${Date.now()}` }]);
-        toast.success('City added successfully');
       }
     } else {
       if (editingItem.id) {
         setGstData(gstData.map(g => g.id === editingItem.id ? editingItem : g));
-        toast.success('GST Slab updated successfully');
       } else {
         setGstData([...gstData, { ...editingItem, id: `gst-${Date.now()}` }]);
-        toast.success('GST Slab added successfully');
       }
     }
+    toast.info('Saved in this browser tab only — no backend endpoint exists yet, so this will not persist after refresh.');
     setIsModalOpen(false);
   };
 
   const handleDelete = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this record?')) {
+    if (window.confirm('Are you sure you want to remove this record? (This only affects this browser tab — nothing is deleted server-side.)')) {
       if (activeTab === 'cities') {
         setCitiesData(citiesData.filter(c => c.id !== id));
       } else {
         setGstData(gstData.filter(g => g.id !== id));
       }
-      toast.success('Record deleted');
     }
   };
 
@@ -81,6 +77,13 @@ export const MasterData: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <div style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.35)', borderRadius: '12px', padding: '1rem 1.25rem', display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+        <AlertTriangle color="#f59e0b" size={20} style={{ flexShrink: 0, marginTop: '2px' }} />
+        <div style={{ fontSize: '0.85rem', color: '#fde68a', lineHeight: '1.5' }}>
+          <strong>No backend endpoint exists for cities/GST slabs yet.</strong> Edits below only change what you see in this browser tab and are lost on refresh — they are not saved to the database.
+        </div>
+      </div>
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Tabs
           tabs={[

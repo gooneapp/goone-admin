@@ -16,10 +16,10 @@ export const Orders: React.FC = () => {
   }, []);
 
   const columns: Column<Order>[] = [
-    { key: 'orderNumber', header: 'Order Ref Number', sortable: true, render: (val) => <span style={{ fontWeight: 600, color: '#38bdf8' }}>{val}</span> },
-    { key: 'businessName', header: 'Shop / Restaurant', sortable: true },
-    { key: 'customerName', header: 'Customer', sortable: true },
-    { key: 'totalAmount', header: 'Total (₹)', sortable: true, render: (val) => `₹${val.toFixed(2)}` },
+    { key: 'id', header: 'Order Ref Number', accessor: (row) => `ORD-${row.id.slice(0, 8).toUpperCase()}`, render: (val) => <span style={{ fontWeight: 600, color: '#38bdf8' }}>{val}</span> },
+    { key: 'business', header: 'Shop / Restaurant', accessor: (row) => row.business?.name || '-' },
+    { key: 'customer', header: 'Customer', accessor: (row) => row.customer?.name || 'Walk-in' },
+    { key: 'totalAmount', header: 'Total (₹)', sortable: true, render: (val) => `₹${Number(val).toFixed(2)}` },
     {
       key: 'status',
       header: 'Order Lifecycle State',
@@ -45,12 +45,12 @@ export const Orders: React.FC = () => {
       render: (val, row) => <Badge variant={val === 'paid' ? 'success' : val === 'credit' ? 'purple' : 'warning'}>{val.toUpperCase()} ({row.paymentMethod})</Badge>,
     },
     {
-      key: 'type',
+      key: 'channel',
       header: 'Channel & KOT',
       render: (_, row) => (
         <div style={{ fontSize: '0.8rem' }}>
-          <div>{row.isDelivery ? '🚚 Delivery' : '🏪 Counter / Pickup'}</div>
-          {row.kotStatus && <div style={{ color: '#fbbf24', fontWeight: 600 }}>KOT: {row.kotStatus} ({row.tableNumber || 'Takeaway'})</div>}
+          <div>{row.delivery ? '🚚 Delivery' : '🏪 Counter / Pickup'}</div>
+          {row.kot && <div style={{ color: '#fbbf24', fontWeight: 600 }}>KOT: {row.kot.status} ({row.kot.table?.tableNumber || 'Takeaway'})</div>}
         </div>
       ),
     },
@@ -87,19 +87,19 @@ export const Orders: React.FC = () => {
         <Modal
           isOpen={isReceiptOpen}
           onClose={() => setIsReceiptOpen(false)}
-          title={`Order Receipt: ${selectedOrder.orderNumber}`}
-          subtitle={`Fulfilled by ${selectedOrder.businessName}`}
+          title={`Order Receipt: ORD-${selectedOrder.id.slice(0, 8).toUpperCase()}`}
+          subtitle={`Fulfilled by ${selectedOrder.business?.name || '-'}`}
         >
           <div style={{ background: '#090d16', border: '1px dashed #334155', borderRadius: '12px', padding: '1.5rem', fontFamily: 'monospace', color: '#f8fafc', marginBottom: '1rem' }}>
             <div style={{ textAlign: 'center', marginBottom: '1rem', borderBottom: '1px dashed #334155', paddingBottom: '0.75rem' }}>
-              <h3 style={{ margin: 0, fontSize: '1.2rem', textTransform: 'uppercase' }}>{selectedOrder.businessName}</h3>
-              <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>Order #{selectedOrder.orderNumber} • {new Date(selectedOrder.createdAt).toLocaleString()}</p>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', textTransform: 'uppercase' }}>{selectedOrder.business?.name || '-'}</h3>
+              <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>Order #ORD-{selectedOrder.id.slice(0, 8).toUpperCase()} • {new Date(selectedOrder.createdAt).toLocaleString()}</p>
             </div>
 
             <div style={{ fontSize: '0.85rem', marginBottom: '1rem' }}>
-              <div>Customer: {selectedOrder.customerName} ({selectedOrder.customerPhone})</div>
-              <div>Channel: {selectedOrder.isDelivery ? 'Home Delivery' : 'Store Pickup / Dine-in'}</div>
-              {selectedOrder.tableNumber && <div>Table No: {selectedOrder.tableNumber} (KOT Ticket)</div>}
+              <div>Customer: {selectedOrder.customer?.name || 'Walk-in'} ({selectedOrder.customer?.phoneNumber || '-'})</div>
+              <div>Channel: {selectedOrder.delivery ? 'Home Delivery' : 'Store Pickup / Dine-in'}</div>
+              {selectedOrder.kot?.table?.tableNumber && <div>Table No: {selectedOrder.kot.table.tableNumber} (KOT Ticket)</div>}
             </div>
 
             <table style={{ width: '100%', fontSize: '0.85rem', borderCollapse: 'collapse', marginBottom: '1rem' }}>
@@ -111,15 +111,17 @@ export const Orders: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {selectedOrder.items?.map((item) => (
-                  <tr key={item.id} style={{ borderBottom: '1px solid #1e293b' }}>
-                    <td style={{ padding: '0.4rem 0' }}>{item.productName}</td>
-                    <td style={{ padding: '0.4rem 0', textAlign: 'center' }}>{item.quantity}</td>
-                    <td style={{ padding: '0.4rem 0', textAlign: 'right' }}>₹{item.totalPrice.toFixed(2)}</td>
-                  </tr>
-                )) || (
+                {selectedOrder.items && selectedOrder.items.length > 0 ? (
+                  selectedOrder.items.map((item) => (
+                    <tr key={item.id} style={{ borderBottom: '1px solid #1e293b' }}>
+                      <td style={{ padding: '0.4rem 0' }}>{item.name}</td>
+                      <td style={{ padding: '0.4rem 0', textAlign: 'center' }}>{item.quantity}</td>
+                      <td style={{ padding: '0.4rem 0', textAlign: 'right' }}>₹{Number(item.subtotal).toFixed(2)}</td>
+                    </tr>
+                  ))
+                ) : (
                   <tr>
-                    <td colSpan={3} style={{ padding: '0.4rem 0' }}>Standard order items bundle ({selectedOrder.itemsCount} items)</td>
+                    <td colSpan={3} style={{ padding: '0.4rem 0' }}>No line items recorded for this order.</td>
                   </tr>
                 )}
               </tbody>
@@ -127,7 +129,7 @@ export const Orders: React.FC = () => {
 
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.1rem', fontWeight: 700, borderTop: '1px dashed #334155', paddingTop: '0.75rem', color: '#34d399' }}>
               <span>Grand Total</span>
-              <span>₹{selectedOrder.totalAmount.toFixed(2)}</span>
+              <span>₹{Number(selectedOrder.totalAmount).toFixed(2)}</span>
             </div>
             <div style={{ fontSize: '0.775rem', color: '#94a3b8', textAlign: 'center', marginTop: '0.75rem' }}>
               Payment Mode: {selectedOrder.paymentMethod.toUpperCase()} • Status: {selectedOrder.paymentStatus.toUpperCase()}

@@ -1,17 +1,20 @@
 import React, { useState } from 'react';
-import { FileText, Download, Printer, Calendar } from 'lucide-react';
+import { Download, Printer, TriangleAlert as AlertTriangle } from 'lucide-react';
 
 export const Reports: React.FC = () => {
   const [fromDate, setFromDate] = useState('2026-07-01');
   const [toDate, setToDate] = useState('2026-07-23');
   const [reportType, setReportType] = useState('sales_summary');
 
-  const handleExport = (format: string) => {
-    alert(`Generating & Downloading ${reportType.toUpperCase()} report in ${format.toUpperCase()} format for period ${fromDate} to ${toDate}`);
-  };
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <div style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.35)', borderRadius: '12px', padding: '1rem 1.25rem', display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+        <AlertTriangle color="#f59e0b" size={20} style={{ flexShrink: 0, marginTop: '2px' }} />
+        <div style={{ fontSize: '0.85rem', color: '#fde68a', lineHeight: '1.5' }}>
+          <strong>Platform-wide report export isn't wired up yet.</strong> The backend only exposes sales/credit/stock reports scoped to a single business (for business owners), not an aggregated admin/platform export. Exports here are disabled until that endpoint exists.
+        </div>
+      </div>
+
       <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: '12px', padding: '1.5rem', color: '#f8fafc' }}>
         <h2 style={{ margin: '0 0 0.5rem 0', fontSize: '1.25rem', fontWeight: 600 }}>Reports & Business Intelligence</h2>
         <p style={{ margin: '0 0 1.5rem 0', fontSize: '0.875rem', color: '#94a3b8' }}>Generate aggregated platform reports with custom date ranges and export options.</p>
@@ -55,20 +58,23 @@ export const Reports: React.FC = () => {
 
         <div style={{ display: 'flex', gap: '0.75rem' }}>
           <button
-            onClick={() => handleExport('csv')}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'linear-gradient(135deg, #0284c7, #38bdf8)', border: 'none', color: '#fff', padding: '0.6rem 1.2rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}
+            disabled
+            title="Not available yet — no platform-wide report export endpoint"
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#334155', border: 'none', color: '#94a3b8', padding: '0.6rem 1.2rem', borderRadius: '8px', cursor: 'not-allowed', fontWeight: 600 }}
           >
             <Download size={16} /> Export CSV Format
           </button>
           <button
-            onClick={() => handleExport('excel')}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#10b981', border: 'none', color: '#fff', padding: '0.6rem 1.2rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}
+            disabled
+            title="Not available yet — no platform-wide report export endpoint"
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#334155', border: 'none', color: '#94a3b8', padding: '0.6rem 1.2rem', borderRadius: '8px', cursor: 'not-allowed', fontWeight: 600 }}
           >
             <Download size={16} /> Export Excel (.xlsx)
           </button>
           <button
-            onClick={() => handleExport('pdf')}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#1e293b', border: '1px solid #334155', color: '#cbd5e1', padding: '0.6rem 1.2rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}
+            disabled
+            title="Not available yet — no platform-wide report export endpoint"
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#1e293b', border: '1px solid #334155', color: '#64748b', padding: '0.6rem 1.2rem', borderRadius: '8px', cursor: 'not-allowed', fontWeight: 600 }}
           >
             <Printer size={16} /> Printable PDF Summary
           </button>

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { apiClient } from '../api/client';
 import type { PartnerVehicle } from '../types';
-import { CheckCircle2, XCircle, ShieldCheck, Car, Bike } from '../components/icons';
+import { CheckCircle2, XCircle, ShieldCheck, Car, Bike } from 'lucide-react';
 
 export const Partners: React.FC = () => {
   const [vehicles, setVehicles] = useState<PartnerVehicle[]>([]);
@@ -17,38 +17,9 @@ export const Partners: React.FC = () => {
       const res: any = await apiClient.get(`/admin/partners${q}`);
       setVehicles(res.data || []);
     } catch (err) {
-      setVehicles([
-        {
-          id: 'v-101',
-          partnerUserId: 'u-201',
-          serviceType: 'delivery',
-          vehicleRegistrationNumber: 'TN 33 AB 1234',
-          vehicleModel: 'TVS XL 100',
-          verified: false,
-          partner: { name: 'Kannan K', phoneNumber: '+919812345670' },
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: 'v-102',
-          partnerUserId: 'u-202',
-          serviceType: 'auto',
-          vehicleRegistrationNumber: 'TN 38 CD 5678',
-          vehicleModel: 'Bajaj RE Auto',
-          verified: false,
-          partner: { name: 'Senthil Kumar', phoneNumber: '+919812345671' },
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: 'v-103',
-          partnerUserId: 'u-203',
-          serviceType: 'car',
-          vehicleRegistrationNumber: 'TN 37 EF 9012',
-          vehicleModel: 'Maruti Suzuki Dzire',
-          verified: true,
-          partner: { name: 'Raju V', phoneNumber: '+919812345672' },
-          createdAt: new Date().toISOString(),
-        },
-      ]);
+      // Errors are already surfaced via the global API error toast — don't mask
+      // a real backend failure by silently substituting fake data.
+      setVehicles([]);
     } finally {
       setLoading(false);
     }
@@ -69,7 +40,7 @@ export const Partners: React.FC = () => {
       setRejectionReason('');
       fetchPartners();
     } catch (err) {
-      alert('Failed to submit verification status');
+      // Error toast is already shown by the global API error interceptor.
     }
   };
 

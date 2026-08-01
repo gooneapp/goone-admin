@@ -174,12 +174,34 @@ export const api = {
     const res = await apiClient.get('/admin/deliveries');
     return res.data;
   },
+  getCustomerRides: async () => {
+    const res = await apiClient.get('/admin/rides');
+    return res.data;
+  },
+  updateRideDistance: async (requestId: string, distanceKm: number) => {
+    const res = await apiClient.patch(`/admin/rides/${requestId}/distance`, { distance_km: distanceKm });
+    return res.data;
+  },
+  getFareConfig: async (vehicleType: 'auto' | 'car') => {
+    const res = await apiClient.get('/admin/rides/fare-config', { params: { vehicle_type: vehicleType } });
+    return res.data;
+  },
+  saveFareConfig: async (payload: {
+    vehicle_type: 'auto' | 'car';
+    base_fare: number;
+    min_km: number;
+    max_km: number | null;
+    slabs: { min_km: number; max_km: number | null; per_km_rate: number }[];
+  }) => {
+    const res = await apiClient.put('/admin/rides/fare-config', payload);
+    return res.data;
+  },
   getSubscriptions: async () => {
     const res = await apiClient.get('/admin/subscriptions');
     return res.data;
   },
   getSubscriptionPlans: async () => {
-    const res = await apiClient.get('/plans');
+    const res = await apiClient.get('/admin/plans');
     return res.data;
   },
   getCreditAccounts: async () => {
@@ -207,7 +229,7 @@ export const api = {
     return res.data;
   },
   getWebsiteConfigs: async () => {
-    const res = await apiClient.get('/admin/config');
+    const res = await apiClient.get('/admin/configs');
     return res.data;
   },
   getAuditLogs: async () => {
@@ -234,6 +256,68 @@ export const api = {
         'Content-Type': 'multipart/form-data',
       },
     });
+    return res.data;
+  },
+
+  // ─── Mutations ──────────────────────────────────────────────────────────
+  updateBusinessStatus: async (businessId: string, status: string) => {
+    const res = await apiClient.patch(`/admin/businesses/${businessId}`, { status });
+    return res.data;
+  },
+  reviewKycDocument: async (docId: string, status: 'approved' | 'rejected', rejectionReason?: string) => {
+    const res = await apiClient.patch(`/admin/kyc/${docId}/review`, {
+      status,
+      rejection_reason: rejectionReason,
+    });
+    return res.data;
+  },
+  createCategory: async (data: {
+    name: string;
+    appliesTo?: string;
+    parentId?: string;
+    nameTranslations?: { ta?: string; en?: string; hi?: string };
+  }) => {
+    const res = await apiClient.post('/admin/categories', {
+      name: data.name,
+      applies_to: data.appliesTo,
+      parent_id: data.parentId,
+      name_translations: data.nameTranslations,
+    });
+    return res.data;
+  },
+  updateFeatureToggle: async (key: string, isEnabled: boolean) => {
+    const res = await apiClient.patch(`/admin/feature-toggles/${key}`, { is_enabled: isEnabled });
+    return res.data;
+  },
+  updateWebsiteConfig: async (key: string, value: string) => {
+    const res = await apiClient.put(`/admin/configs/${key}`, { value });
+    return res.data;
+  },
+  createAdminUser: async (data: { email: string; password: string; name: string; role: string }) => {
+    const res = await apiClient.post('/admin/users', data);
+    return res.data;
+  },
+  updateAdminUser: async (id: string, data: { role?: string; active?: boolean }) => {
+    const res = await apiClient.patch(`/admin/users/${id}`, data);
+    return res.data;
+  },
+  updateSupportTicket: async (id: string, data: { status?: string; assigned_admin_id?: string }) => {
+    const res = await apiClient.patch(`/admin/tickets/${id}`, data);
+    return res.data;
+  },
+  overrideSubscription: async (
+    businessId: string,
+    data: { plan_id: string; reason: string; extend_days?: number },
+  ) => {
+    const res = await apiClient.post(`/admin/subscriptions/${businessId}/override`, data);
+    return res.data;
+  },
+  upsertContentItem: async (data: Record<string, unknown>) => {
+    const res = await apiClient.post('/admin/content', data);
+    return res.data;
+  },
+  deleteContentItem: async (id: string) => {
+    const res = await apiClient.delete(`/admin/content/${id}`);
     return res.data;
   },
 };

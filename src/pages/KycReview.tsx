@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../api/client';
+import { toast } from '../store/toastStore';
 import { KycDocument } from '../types';
 import { DataTable, Column } from '../components/DataTable';
 import { Badge } from '../components/Badge';
@@ -17,15 +18,25 @@ export const KycReview: React.FC = () => {
     api.getKycDocuments().then(setKycDocs);
   }, []);
 
-  const handleApprove = (doc: KycDocument) => {
-    setKycDocs(prev => prev.map(d => d.id === doc.id ? { ...d, status: 'approved' } : d));
-    alert(`Document '${doc.fileName}' APPROVED. Audit log entry recorded.`);
+  const handleApprove = async (doc: KycDocument) => {
+    try {
+      await api.reviewKycDocument(doc.id, 'approved');
+      setKycDocs(prev => prev.map(d => d.id === doc.id ? { ...d, status: 'approved' } : d));
+      toast.success(`Document '${doc.fileName}' APPROVED. Audit log entry recorded.`);
+    } catch {
+      // Error toast already shown by the global API error interceptor.
+    }
   };
 
-  const handleReject = (reason: string) => {
+  const handleReject = async (reason: string) => {
     if (!selectedDoc) return;
-    setKycDocs(prev => prev.map(d => d.id === selectedDoc.id ? { ...d, status: 'rejected', rejectionReason: reason } : d));
-    alert(`Document '${selectedDoc.fileName}' REJECTED. Mandatory reason: ${reason}`);
+    try {
+      await api.reviewKycDocument(selectedDoc.id, 'rejected', reason);
+      setKycDocs(prev => prev.map(d => d.id === selectedDoc.id ? { ...d, status: 'rejected', rejectionReason: reason } : d));
+      toast.success(`Document '${selectedDoc.fileName}' REJECTED. Mandatory reason: ${reason}`);
+    } catch {
+      // Error toast already shown by the global API error interceptor.
+    }
   };
 
   const columns: Column<KycDocument>[] = [

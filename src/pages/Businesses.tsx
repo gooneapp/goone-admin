@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../api/client';
+import { toast } from '../store/toastStore';
 import { Business, BusinessStatus } from '../types';
 import { DataTable, Column } from '../components/DataTable';
 import { Badge } from '../components/Badge';
@@ -17,15 +18,17 @@ export const Businesses: React.FC = () => {
     api.getBusinesses().then(setBusinesses);
   }, []);
 
-  const handleSuspend = (reason: string) => {
+  const handleSuspend = async (reason: string) => {
     if (!selectedBusiness) return;
+    await api.updateBusinessStatus(selectedBusiness.id, 'suspended');
     setBusinesses(prev => prev.map(b => b.id === selectedBusiness.id ? { ...b, status: 'suspended' as BusinessStatus } : b));
-    alert(`Business '${selectedBusiness.name}' suspended. Reason: ${reason}`);
+    toast.success(`Business '${selectedBusiness.name}' suspended. Reason: ${reason}`);
   };
 
-  const handleReinstate = (b: Business) => {
+  const handleReinstate = async (b: Business) => {
+    await api.updateBusinessStatus(b.id, 'active');
     setBusinesses(prev => prev.map(item => item.id === b.id ? { ...item, status: 'active' as BusinessStatus } : item));
-    alert(`Business '${b.name}' reinstated to Active status.`);
+    toast.success(`Business '${b.name}' reinstated to Active status.`);
   };
 
   const columns: Column<Business>[] = [

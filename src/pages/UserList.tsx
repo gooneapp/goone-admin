@@ -1,10 +1,26 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../api/client';
-import { SystemUser, UserType } from '../types';
+import { SystemUser, UserDefaultRole } from '../types';
 import { DataTable, Column } from '../components/DataTable';
 import { Badge } from '../components/Badge';
 import { Modal } from '../components/Modal';
-import { Users, Shield, Phone, Mail, UserCheck, Lock } from 'lucide-react';
+import { UserCheck } from 'lucide-react';
+
+function exportUsersToCsv(rows: SystemUser[]) {
+  const headers = ['Name', 'Phone', 'Account Scope', 'Language', 'Verified', 'Signup Date'];
+  const csvRows = rows.map((u) =>
+    [u.name, u.phoneNumber, u.roleDefault, u.preferredLanguage, u.isVerified ? 'Verified' : 'Unverified', u.createdAt]
+      .map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`)
+      .join(','),
+  );
+  const csvContent = `data:text/csv;charset=utf-8,${headers.join(',')}\n${csvRows.join('\n')}`;
+  const link = document.createElement('a');
+  link.setAttribute('href', encodeURI(csvContent));
+  link.setAttribute('download', `selected_users_${new Date().toISOString().split('T')[0]}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
 
 export const UserList: React.FC = () => {
   const [users, setUsers] = useState<SystemUser[]>([]);
@@ -16,25 +32,21 @@ export const UserList: React.FC = () => {
   }, []);
 
   const columns: Column<SystemUser>[] = [
-    { key: 'name', header: 'Full Name', sortable: true },
+    { key: 'name', header: 'Full Name', sortable: true, render: (val) => val || '-' },
     { key: 'phoneNumber', header: 'Phone Number', sortable: true },
-    { key: 'email', header: 'Email Address', sortable: true, render: (val) => val || '-' },
     {
-      key: 'userType',
+      key: 'roleDefault',
       header: 'Account Scope',
       sortable: true,
       filterable: true,
-      filterOptions: ['customer', 'business_owner', 'employee', 'delivery_partner', 'ride_driver'],
-      render: (val: UserType) => {
-        const variants: Record<UserType, any> = {
+      filterOptions: ['customer', 'business', 'delivery'],
+      render: (val: UserDefaultRole) => {
+        const variants: Record<UserDefaultRole, any> = {
           customer: 'info',
-          business_owner: 'purple',
-          employee: 'neutral',
-          delivery_partner: 'warning',
-          ride_driver: 'success',
-          admin: 'danger',
+          business: 'purple',
+          delivery: 'warning',
         };
-        return <Badge variant={variants[val] || 'neutral'}>{val.replace('_', ' ')}</Badge>;
+        return <Badge variant={variants[val] || 'neutral'}>{val}</Badge>;
       },
     },
     {
@@ -63,8 +75,8 @@ export const UserList: React.FC = () => {
         columns={columns}
         data={users}
         keyExtractor={(item) => item.id}
-        searchPlaceholder="Search by name, phone, email..."
-        searchFields={['name', 'phoneNumber', 'email', 'userType']}
+        searchPlaceholder="Search by name, phone..."
+        searchFields={['name', 'phoneNumber', 'roleDefault']}
         onRowClick={(row) => {
           setSelectedUser(row);
           setIsModalOpen(true);
@@ -78,19 +90,11 @@ export const UserList: React.FC = () => {
               setIsModalOpen(true);
             },
           },
-          {
-            label: 'Toggle Account Lock',
-            icon: <Lock size={14} />,
-            variant: 'danger',
-            onClick: (row) => {
-              alert(`Toggled lock status for ${row.name}`);
-            },
-          },
         ]}
         bulkActions={[
           {
             label: 'Export Selected Users',
-            onClick: (rows) => alert(`Exporting ${rows.length} users...`),
+            onClick: (rows) => exportUsersToCsv(rows),
           },
         ]}
       />
@@ -110,14 +114,9 @@ export const UserList: React.FC = () => {
             </div>
 
             <div style={{ background: '#1e293b', padding: '0.85rem', borderRadius: '8px' }}>
-              <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Email Address</div>
-              <div style={{ fontSize: '0.95rem', fontWeight: 600, color: '#f8fafc', marginTop: '0.2rem' }}>{selectedUser.email || 'Not provided'}</div>
-            </div>
-
-            <div style={{ background: '#1e293b', padding: '0.85rem', borderRadius: '8px' }}>
               <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>User Account Persona</div>
               <div style={{ fontSize: '0.95rem', fontWeight: 600, color: '#38bdf8', marginTop: '0.2rem', textTransform: 'capitalize' }}>
-                {selectedUser.userType.replace('_', ' ')}
+                {selectedUser.roleDefault}
               </div>
             </div>
 
