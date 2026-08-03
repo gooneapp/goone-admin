@@ -66,7 +66,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate }) => 
       items: [
         { path: '/users', label: 'User Directory', icon: <Users size={18} />, roles: ['super_admin', 'admin', 'manager', 'support'] },
         { path: '/businesses', label: 'Businesses & Shops', icon: <Building2 size={18} />, roles: ['super_admin', 'admin', 'manager', 'finance'] },
-        { path: '/kyc-review', label: 'KYC Document Approval', icon: <FileCheck size={18} />, roles: ['super_admin', 'admin', 'manager'] },
+        // 'support' is a real backend AdminRole and the KYC list endpoint accepts it;
+        // omitting it here hid the queue from the people who staff it.
+        { path: '/kyc-review', label: 'KYC Document Approval', icon: <FileCheck size={18} />, roles: ['super_admin', 'admin', 'manager', 'support'] },
       ],
     },
     {
@@ -98,7 +100,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate }) => 
     {
       title: 'SYSTEM & GOVERNANCE',
       items: [
-        { path: '/settings', label: 'App Config & Feature Toggles', icon: <Settings size={18} />, roles: ['super_admin', 'admin'] },
+        // super_admin only: the APK upload and config endpoints behind this page are
+        // gated on super_admin server-side, so showing it wider just yields a 403.
+        { path: '/settings', label: 'App Config & Feature Toggles', icon: <Settings size={18} />, roles: ['super_admin'] },
         { path: '/audit-logs', label: 'Platform Audit Logs', icon: <ShieldCheck size={18} />, roles: ['super_admin', 'admin', 'manager', 'finance'] },
         { path: '/api-management', label: 'API Keys & Webhooks', icon: <Key size={18} />, roles: ['super_admin'] },
         { path: '/system-monitoring', label: 'System Health & Services', icon: <Activity size={18} />, roles: ['super_admin', 'operations'] },

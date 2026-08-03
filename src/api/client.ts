@@ -1,11 +1,26 @@
-import axios from 'axios';
+import axios, { type AxiosRequestConfig } from 'axios';
 import { toast } from '../store/toastStore';
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'https://api.goone.tech/api/v1';
 
+/**
+ * Per-request opt-outs, read by the interceptors below.
+ * Declared on the axios config type so callers get autocomplete and type-checking.
+ */
+declare module 'axios' {
+  export interface AxiosRequestConfig {
+    /** Suppress the global error toast — for callers that render their own error UI. */
+    skipErrorToast?: boolean;
+    /** Never replay this request after a token refresh (a consumed FormData body cannot be re-sent). */
+    noRetry?: boolean;
+  }
+}
+
 export const apiClient = axios.create({
   baseURL: BASE_URL,
-  timeout: 5000,
+  // 5s was the previous value and it aborted every APK upload after five seconds
+  // while the bytes kept streaming to the server. Uploads override this with 0.
+  timeout: 20000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -62,6 +77,9 @@ apiClient.interceptors.response.use(
       error.response?.status === 401 &&
       originalRequest &&
       !originalRequest._retry &&
+      // A multipart body is a one-shot stream — replaying it after a refresh sends
+      // an empty request. Upload callers refresh before starting instead.
+      !originalRequest.noRetry &&
       !originalRequest.url?.includes('/admin/auth/login') &&
       !originalRequest.url?.includes('/admin/auth/refresh')
     ) {
@@ -127,8 +145,9 @@ apiClient.interceptors.response.use(
     const backendErrorMessage = error.response?.data?.error?.message || error.response?.data?.message;
     const message = backendErrorMessage || error.message || 'An unexpected error occurred';
 
-    // Avoid duplicating toasts for refresh failures which are handled above
-    if (!originalRequest?.url?.includes('/admin/auth/refresh')) {
+    // Avoid duplicating toasts: refresh failures are handled above, and callers that
+    // render their own inline error (file upload) opt out with skipErrorToast.
+    if (!originalRequest?.url?.includes('/admin/auth/refresh') && !originalRequest?.skipErrorToast) {
       toast.error(message);
     }
 
@@ -191,6 +210,7 @@ export const api = {
     base_fare: number;
     min_km: number;
     max_km: number | null;
+    default_per_km_rate: number;
     slabs: { min_km: number; max_km: number | null; per_km_rate: number }[];
   }) => {
     const res = await apiClient.put('/admin/rides/fare-config', payload);
@@ -248,15 +268,40 @@ export const api = {
     const res = await apiClient.get('/admin/admin-users');
     return res.data;
   },
-  uploadAppRelease: async (appType: 'customer' | 'business' | 'partner', file: File) => {
-    const formData = new FormData();
-    formData.append('apk', file);
-    const res = await apiClient.post(`/admin/configs/app-releases/${appType}`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
+  /**
+   * Uploads a file to any endpoint that accepts multipart.
+   *
+   * Deliberately does NOT set Content-Type — the browser must add the multipart
+   * boundary itself, and axios does that automatically for a FormData body.
+   */
+  uploadFile: async (
+    endpoint: string,
+    formData: FormData,
+    opts: { onProgress?: (percent: number) => void; signal?: AbortSignal } = {},
+  ) => {
+    const config: AxiosRequestConfig = {
+      // No timeout: a 100 MB APK on a slow link legitimately takes minutes.
+      timeout: 0,
+      noRetry: true,
+      skipErrorToast: true,
+      onUploadProgress: (event) => {
+        if (!opts.onProgress) return;
+        // event.total is absent on some proxies; fall back to indeterminate.
+        opts.onProgress(event.total ? Math.round((event.loaded * 100) / event.total) : -1);
       },
-    });
+    };
+    if (opts.signal) config.signal = opts.signal;
+
+    const res = await apiClient.post(endpoint, formData, config);
     return res.data;
+  },
+
+  /** Fetches a file's bytes through the authenticated endpoint (private files). */
+  fetchFileBlob: async (fileId: string, signal?: AbortSignal): Promise<Blob> => {
+    const config: AxiosRequestConfig = { responseType: 'blob', skipErrorToast: true };
+    if (signal) config.signal = signal;
+    const res = await apiClient.get(`/files/${fileId}`, config);
+    return res.data as Blob;
   },
 
   // ─── Mutations ──────────────────────────────────────────────────────────
@@ -276,12 +321,14 @@ export const api = {
     appliesTo?: string;
     parentId?: string;
     nameTranslations?: { ta?: string; en?: string; hi?: string };
+    iconUrl?: string;
   }) => {
     const res = await apiClient.post('/admin/categories', {
       name: data.name,
       applies_to: data.appliesTo,
       parent_id: data.parentId,
       name_translations: data.nameTranslations,
+      icon_url: data.iconUrl,
     });
     return res.data;
   },

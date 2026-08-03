@@ -6,7 +6,8 @@ import { DataTable, Column } from '../components/DataTable';
 import { Badge } from '../components/Badge';
 import { Modal } from '../components/Modal';
 import { ConfirmationDialog } from '../components/ConfirmationDialog';
-import { FileCheck, CircleCheck as CheckCircle, CircleX as XCircle, Eye } from 'lucide-react';
+import { AuthedFile } from '../components/AuthedFile';
+import { CircleCheck as CheckCircle, CircleX as XCircle, Eye, TriangleAlert as AlertTriangle } from 'lucide-react';
 
 export const KycReview: React.FC = () => {
   const [kycDocs, setKycDocs] = useState<KycDocument[]>([]);
@@ -40,7 +41,24 @@ export const KycReview: React.FC = () => {
   };
 
   const columns: Column<KycDocument>[] = [
-    { key: 'fileName', header: 'Document File Name', sortable: true },
+    {
+      key: 'fileName',
+      header: 'Document File Name',
+      sortable: true,
+      render: (val, row) => (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+          {val}
+          {row.isLegacyRef && (
+            <span
+              title="This submission predates the file upload system — no retrievable file is attached."
+              style={{ fontSize: '0.65rem', fontWeight: 700, color: '#fbbf24', border: '1px solid rgba(251,191,36,0.4)', borderRadius: '4px', padding: '0 0.3rem' }}
+            >
+              NO FILE
+            </span>
+          )}
+        </span>
+      ),
+    },
     { key: 'businessName', header: 'Business Name', accessor: (row) => row.business?.name || '-' },
     { key: 'ownerName', header: 'Owner Name', accessor: (row) => row.business?.ownerName || '-' },
     { key: 'docType', header: 'Document Category', sortable: true, render: (val) => <span style={{ textTransform: 'uppercase', fontWeight: 600, color: '#38bdf8' }}>{val.replace('_', ' ')}</span> },
@@ -110,9 +128,30 @@ export const KycReview: React.FC = () => {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
             <div>
               <h4 style={{ margin: '0 0 0.75rem 0', color: '#38bdf8' }}>Document Image / PDF View</h4>
-              <div style={{ background: '#090d16', border: '1px solid #334155', borderRadius: '8px', overflow: 'hidden', textAlign: 'center' }}>
-                <img src={selectedDoc.fileUrl} alt={selectedDoc.fileName} style={{ maxWidth: '100%', height: 'auto', display: 'block' }} />
-              </div>
+              {selectedDoc.fileId ? (
+                // Private file: AuthedFile fetches it with the bearer token and picks
+                // an <img> or <object> viewer from the actual content type, so PDF
+                // submissions render instead of showing a broken image.
+                <AuthedFile
+                  fileId={selectedDoc.fileId}
+                  mimeType={selectedDoc.fileMimeType}
+                  fileName={selectedDoc.fileName}
+                />
+              ) : selectedDoc.fileUrl ? (
+                <div style={{ background: '#090d16', border: '1px solid #334155', borderRadius: '8px', overflow: 'hidden', textAlign: 'center' }}>
+                  <img src={selectedDoc.fileUrl} alt={selectedDoc.fileName} style={{ maxWidth: '100%', height: 'auto', display: 'block' }} />
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', minHeight: '160px', background: '#0b1220', border: '1px solid #334155', borderRadius: '8px', padding: '1rem', textAlign: 'center' }}>
+                  <AlertTriangle size={26} color="#f59e0b" />
+                  <span style={{ color: '#fbbf24', fontSize: '0.8rem', lineHeight: 1.5 }}>
+                    No file is attached to this submission.
+                    <br />
+                    It predates the file upload system and cannot be retrieved — ask the
+                    owner to re-submit.
+                  </span>
+                </div>
+              )}
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>

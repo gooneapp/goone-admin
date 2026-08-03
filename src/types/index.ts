@@ -65,12 +65,19 @@ export interface KycDocument {
   id: string;
   businessId: string;
   docType: KycDocType;
-  fileUrl: string;
   fileName: string;
+  /** Set for documents uploaded through POST /api/v1/files — fetch via AuthedFile. */
+  fileId?: string | null;
+  /** Only populated for public files or legacy absolute URLs. */
+  fileUrl?: string | null;
+  fileMimeType?: string | null;
+  /** True when fileRef predates the files module and points at nothing retrievable. */
+  isLegacyRef?: boolean;
   status: KycStatus;
   rejectionReason?: string;
   reviewedByAdminId?: string;
   createdAt: string;
+  reviewedAt?: string;
   updatedAt?: string;
   business?: {
     name: string;
@@ -310,6 +317,8 @@ export interface CmsContentItem {
   bodyTa?: string;
   bodyEn?: string;
   bodyHi?: string;
+  /** Banner image URL for announcements (public asset from /admin/upload/image). */
+  mediaUrl?: string;
   published: boolean;
   updatedByAdminId?: string;
   updatedByAdminName?: string;

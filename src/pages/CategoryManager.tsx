@@ -6,6 +6,7 @@ import { DataTable, Column } from '../components/DataTable';
 import { Badge } from '../components/Badge';
 import { Modal } from '../components/Modal';
 import { Plus, CircleAlert as AlertCircle } from 'lucide-react';
+import { FileUpload } from '../components/FileUpload';
 
 export const CategoryManager: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -13,6 +14,7 @@ export const CategoryManager: React.FC = () => {
   const [newCatNameEn, setNewCatNameEn] = useState('');
   const [newCatNameTa, setNewCatNameTa] = useState('');
   const [newCatNameHi, setNewCatNameHi] = useState('');
+  const [newCatIconUrl, setNewCatIconUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -27,12 +29,14 @@ export const CategoryManager: React.FC = () => {
         name: newCatNameEn,
         appliesTo: 'business_type',
         nameTranslations: { en: newCatNameEn, ta: newCatNameTa, hi: newCatNameHi },
+        ...(newCatIconUrl ? { iconUrl: newCatIconUrl } : {}),
       });
       setCategories(prev => [...prev, created]);
       setIsAddModalOpen(false);
       setNewCatNameEn('');
       setNewCatNameTa('');
       setNewCatNameHi('');
+      setNewCatIconUrl('');
       toast.success(`Business Type & Category '${created.name}' created! Propagated instantly to mobile app onboardings.`);
     } catch {
       // Error toast already shown by the global API error interceptor.
@@ -134,6 +138,16 @@ export const CategoryManager: React.FC = () => {
               />
             </div>
           </div>
+
+          <FileUpload
+            label="Category Icon (optional)"
+            accept="image/jpeg,image/png,image/webp"
+            maxSizeMb={10}
+            uploadType="image"
+            currentUrl={newCatIconUrl}
+            onUploadSuccess={(url) => setNewCatIconUrl(url)}
+            onRemove={() => setNewCatIconUrl('')}
+          />
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', borderTop: '1px solid #334155', paddingTop: '1rem', marginTop: '0.5rem' }}>
             <button type="button" onClick={() => setIsAddModalOpen(false)} style={{ background: '#1e293b', border: '1px solid #334155', color: '#cbd5e1', padding: '0.55rem 1rem', borderRadius: '8px', cursor: 'pointer' }}>Cancel</button>

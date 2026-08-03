@@ -79,6 +79,7 @@ const VehicleFareEditor: React.FC<{ vehicleType: 'auto' | 'car' }> = ({ vehicleT
         base_fare: Number(config.base_fare),
         min_km: Number(config.min_km),
         max_km: config.max_km !== null && config.max_km !== undefined ? Number(config.max_km) : null,
+        default_per_km_rate: Number(config.default_per_km_rate),
         slabs: config.slabs.map((s) => ({
           min_km: Number(s.min_km),
           max_km: s.max_km !== null && s.max_km !== undefined ? Number(s.max_km) : null,
@@ -96,10 +97,14 @@ const VehicleFareEditor: React.FC<{ vehicleType: 'auto' | 'car' }> = ({ vehicleT
 
   return (
     <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: '12px', padding: '1.25rem' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1.25rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.25rem' }}>
         <div>
           <label style={labelStyle}>Base Fare (₹)</label>
           <input type="number" min="0" step="1" value={config.base_fare} onChange={(e) => updateField('base_fare', e.target.value)} style={inputStyle} />
+        </div>
+        <div>
+          <label style={labelStyle}>Default Per-KM (₹)</label>
+          <input type="number" min="0" step="0.5" value={config.default_per_km_rate} onChange={(e) => updateField('default_per_km_rate', e.target.value)} style={inputStyle} />
         </div>
         <div>
           <label style={labelStyle}>Minimum KM</label>
