@@ -42,18 +42,97 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-let isRefreshing = false;
-let failedQueue: Array<{ resolve: (value?: unknown) => void; reject: (reason?: any) => void }> = [];
+const TOKEN_KEY = 'goone_admin_token';
+const REFRESH_TOKEN_KEY = 'goone_admin_refresh_token';
 
-const processQueue = (error: any, token: string | null = null) => {
-  failedQueue.forEach((prom) => {
-    if (error) {
-      prom.reject(error);
-    } else {
-      prom.resolve(token);
-    }
+const readStoredToken = (key: string): string | null => {
+  const value = localStorage.getItem(key);
+  return !value || value === 'undefined' || value === 'null' ? null : value;
+};
+
+let refreshPromise: Promise<string> | null = null;
+
+const performRefresh = async (): Promise<string> => {
+  const refreshToken = readStoredToken(REFRESH_TOKEN_KEY);
+  if (!refreshToken) throw new Error('No refresh token available');
+
+  const res = await axios.post(`${BASE_URL}/admin/auth/refresh`, {
+    refresh_token: refreshToken,
   });
-  failedQueue = [];
+
+  // Backend response format: { success: true, data: { access_token, refresh_token } }
+  const resData = res.data?.data || res.data;
+  const access_token = resData?.access_token;
+  if (!access_token) throw new Error('Refresh failed: No access token returned');
+
+  const { useAuthStore } = await import('../store/authStore');
+  const user = useAuthStore.getState().user;
+  if (user) {
+    useAuthStore.getState().setAuth(access_token, resData.refresh_token || refreshToken, user);
+  } else {
+    // The profile may not have loaded yet; the new token must still be usable.
+    localStorage.setItem(TOKEN_KEY, access_token);
+    if (resData.refresh_token) localStorage.setItem(REFRESH_TOKEN_KEY, resData.refresh_token);
+  }
+  return access_token;
+};
+
+/**
+ * Refreshes the access token, at most once at a time.
+ *
+ * Single-flight matters here: concurrent 401s — or a 401 racing the pre-upload
+ * check below — would otherwise each spend the refresh token, and whichever
+ * request lost the race would be rejected with a token the server has rotated.
+ */
+const refreshAccessToken = (): Promise<string> => {
+  if (!refreshPromise) {
+    refreshPromise = performRefresh().finally(() => {
+      refreshPromise = null;
+    });
+  }
+  return refreshPromise;
+};
+
+const forceLogout = async () => {
+  const { useAuthStore } = await import('../store/authStore');
+  useAuthStore.getState().logout();
+};
+
+/** Seconds of headroom, so a token cannot expire while the request is in flight. */
+const EXPIRY_SKEW_SECONDS = 60;
+
+const isTokenExpiringSoon = (token: string): boolean => {
+  try {
+    const payload = JSON.parse(
+      atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')),
+    ) as { exp?: number };
+    if (!payload.exp) return false;
+    return payload.exp - EXPIRY_SKEW_SECONDS <= Date.now() / 1000;
+  } catch {
+    // Undecodable: let the request go and let the server be the judge.
+    return false;
+  }
+};
+
+/**
+ * Guarantees a usable access token *before* a multipart request starts.
+ *
+ * Uploads set `noRetry`, because a FormData body is a one-shot stream that cannot
+ * be replayed after a refresh. That left them as the only requests in the app with
+ * no recovery path at all: admin access tokens live 15 minutes, so any upload
+ * attempted after that failed with a 401 while every other screen kept working,
+ * silently refreshing as it went.
+ */
+const ensureFreshAccessToken = async (): Promise<void> => {
+  const token = readStoredToken(TOKEN_KEY);
+  if (token && !isTokenExpiringSoon(token)) return;
+
+  try {
+    await refreshAccessToken();
+  } catch {
+    await forceLogout();
+    throw new Error('Your session has expired. Please log in again, then retry the upload.');
+  }
 };
 
 apiClient.interceptors.response.use(
@@ -83,61 +162,22 @@ apiClient.interceptors.response.use(
       !originalRequest.url?.includes('/admin/auth/login') &&
       !originalRequest.url?.includes('/admin/auth/refresh')
     ) {
-      if (isRefreshing) {
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        })
-          .then((token) => {
-            originalRequest.headers.Authorization = 'Bearer ' + token;
-            return apiClient(originalRequest);
-          })
-          .catch((err) => {
-            return Promise.reject(err);
-          });
-      }
-
       originalRequest._retry = true;
-      isRefreshing = true;
 
-      const refreshToken = localStorage.getItem('goone_admin_refresh_token');
-      if (!refreshToken || refreshToken === 'undefined' || refreshToken === 'null') {
-        isRefreshing = false;
-        const { useAuthStore } = await import('../store/authStore');
-        useAuthStore.getState().logout();
+      if (!readStoredToken(REFRESH_TOKEN_KEY)) {
+        await forceLogout();
         return Promise.reject(error);
       }
 
       try {
-        const res = await axios.post(`${BASE_URL}/admin/auth/refresh`, {
-          refresh_token: refreshToken,
-        });
-
-        // Backend response format: { success: true, data: { access_token, refresh_token } }
-        const resData = res.data?.data || res.data;
-        const access_token = resData.access_token;
-        const new_refresh_token = resData.refresh_token || refreshToken;
-
-        if (!access_token) {
-          throw new Error('Refresh failed: No access token returned');
-        }
-
-        const { useAuthStore } = await import('../store/authStore');
-        const user = useAuthStore.getState().user;
-        if (user) {
-          useAuthStore.getState().setAuth(access_token, new_refresh_token, user);
-        }
-
-        processQueue(null, access_token);
+        // Concurrent 401s all await the same refresh; see refreshAccessToken.
+        const access_token = await refreshAccessToken();
         originalRequest.headers.Authorization = 'Bearer ' + access_token;
         return apiClient(originalRequest);
       } catch (refreshError) {
-        processQueue(refreshError, null);
-        const { useAuthStore } = await import('../store/authStore');
-        useAuthStore.getState().logout();
+        await forceLogout();
         toast.error('Session expired. Please log in again.');
         return Promise.reject(refreshError);
-      } finally {
-        isRefreshing = false;
       }
     }
 
@@ -291,6 +331,9 @@ export const api = {
       },
     };
     if (opts.signal) config.signal = opts.signal;
+
+    // Must happen before the body starts streaming: a 401 mid-upload is unrecoverable.
+    await ensureFreshAccessToken();
 
     const res = await apiClient.post(endpoint, formData, config);
     return res.data;
