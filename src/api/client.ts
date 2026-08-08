@@ -324,6 +324,10 @@ export const api = {
       timeout: 0,
       noRetry: true,
       skipErrorToast: true,
+      // FormData requires multipart/form-data with boundary; remove the default JSON header
+      headers: {
+        'Content-Type': undefined,
+      },
       onUploadProgress: (event) => {
         if (!opts.onProgress) return;
         // event.total is absent on some proxies; fall back to indeterminate.
